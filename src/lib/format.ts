@@ -16,6 +16,19 @@ export function formatMoney(
   }).format(amount);
 }
 
+export function formatBudgetInputAmount(
+  amount: number,
+  currency: string,
+): string {
+  if (Number.isNaN(amount) || amount <= 0) {
+    return "";
+  }
+  if (currency === "IDR") {
+    return String(Math.round(amount));
+  }
+  return amount.toFixed(2);
+}
+
 export function formatMonthYear(year: number, month: number) {
   return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
     month: "long",

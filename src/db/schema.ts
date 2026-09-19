@@ -45,6 +45,7 @@ export const categories = pgTable("categories", {
     precision: 14,
     scale: 2,
   }),
+  budgetCurrency: varchar("budget_currency", { length: 3 }).default("IDR"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

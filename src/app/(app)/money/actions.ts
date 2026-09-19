@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDb, schema } from "@/db";
+import { getDisplayCurrency } from "@/lib/currency/display-currency";
 import {
   categoryBudgetDefaultSchema,
   categoryInputSchema,
@@ -99,6 +100,7 @@ export async function createCategory(
   }
 
   const db = getDb();
+  const displayCurrency = await getDisplayCurrency();
   await db.insert(schema.categories).values({
     name: parsed.data.name,
     kind: parsed.data.kind,
@@ -107,11 +109,15 @@ export async function createCategory(
       parsed.data.kind === "expense" && parsed.data.defaultMonthlyBudget != null
         ? parsed.data.defaultMonthlyBudget.toFixed(2)
         : null,
+    budgetCurrency:
+      parsed.data.kind === "expense" && parsed.data.defaultMonthlyBudget != null
+        ? displayCurrency
+        : null,
   });
 
-  revalidatePath("/categories");
+  revalidatePath("/settings/categories");
   revalidatePath("/transactions");
-  revalidatePath("/budget");
+  revalidatePath("/settings/budget");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -133,6 +139,7 @@ export async function updateCategory(
   }
 
   const db = getDb();
+  const displayCurrency = await getDisplayCurrency();
   const { id, name, kind, color, defaultMonthlyBudget } = parsed.data;
 
   await db
@@ -145,12 +152,16 @@ export async function updateCategory(
         kind === "expense" && defaultMonthlyBudget != null
           ? defaultMonthlyBudget.toFixed(2)
           : null,
+      budgetCurrency:
+        kind === "expense" && defaultMonthlyBudget != null
+          ? displayCurrency
+          : null,
     })
     .where(eq(schema.categories.id, id));
 
-  revalidatePath("/categories");
+  revalidatePath("/settings/categories");
   revalidatePath("/transactions");
-  revalidatePath("/budget");
+  revalidatePath("/settings/budget");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -177,9 +188,9 @@ export async function deleteCategory(
 
   await db.delete(schema.categories).where(eq(schema.categories.id, id));
 
-  revalidatePath("/categories");
+  revalidatePath("/settings/categories");
   revalidatePath("/transactions");
-  revalidatePath("/budget");
+  revalidatePath("/settings/budget");
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -198,15 +209,17 @@ export async function updateCategoryDefaultBudget(
   }
 
   const db = getDb();
+  const displayCurrency = await getDisplayCurrency();
   await db
     .update(schema.categories)
     .set({
       defaultMonthlyBudget: parsed.data.defaultMonthlyBudget.toFixed(2),
+      budgetCurrency: displayCurrency,
     })
     .where(eq(schema.categories.id, parsed.data.categoryId));
 
-  revalidatePath("/budget");
-  revalidatePath("/categories");
+  revalidatePath("/settings/budget");
+  revalidatePath("/settings/categories");
   revalidatePath("/dashboard");
   return { ok: true };
 }

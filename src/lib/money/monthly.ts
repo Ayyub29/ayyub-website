@@ -122,7 +122,13 @@ export async function getMonthlySummary(
 
   const byCategory: CategoryMonthRow[] = categories.map((category) => {
     const actual = actualByCategory.get(category.id) ?? 0;
-    const planned = Number(category.defaultMonthlyBudget ?? 0);
+    const planned = category.defaultMonthlyBudget
+      ? toDisplay(
+          Number(category.defaultMonthlyBudget),
+          category.budgetCurrency ?? options.displayCurrency,
+          options,
+        )
+      : 0;
     const variance =
       category.kind === "expense" ? planned - actual : actual - planned;
 

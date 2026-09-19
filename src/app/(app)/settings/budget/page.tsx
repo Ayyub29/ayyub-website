@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/db";
-import { getDisplayMoney } from "@/lib/currency/server-display";
-import { formatMonthYear } from "@/lib/format";
+import {
+  getDisplayMoney,
+  type DisplayMoney,
+} from "@/lib/currency/server-display";
+import { formatBudgetInputAmount, formatMonthYear } from "@/lib/format";
 import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
 import { BudgetConfigRow } from "@/components/budget-config-row";
 import { BudgetStatusBadge } from "@/components/budget-status-badge";
@@ -39,9 +42,11 @@ export default async function SettingsBudgetPage({
   let configRows: Array<{
     categoryId: string;
     categoryName: string;
-    defaultBudget: string | null;
+    displayAmount: string;
+    storedAmount: string | null;
+    storedCurrency: string | null;
   }> = [];
-  let money;
+  let money: DisplayMoney | null = null;
 
   try {
     money = await getDisplayMoney();
@@ -56,11 +61,24 @@ export default async function SettingsBudgetPage({
       orderBy: (cat, { asc }) => [asc(cat.sortOrder), asc(cat.name)],
     });
 
-    configRows = expenseCategories.map((cat) => ({
-      categoryId: cat.id,
-      categoryName: cat.name,
-      defaultBudget: cat.defaultMonthlyBudget,
-    }));
+    configRows = expenseCategories.map((cat) => {
+      const storedCurrency = cat.budgetCurrency ?? "IDR";
+      const converted =
+        cat.defaultMonthlyBudget != null
+          ? money.convert(cat.defaultMonthlyBudget, storedCurrency)
+          : 0;
+
+      return {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        storedAmount: cat.defaultMonthlyBudget,
+        storedCurrency: cat.budgetCurrency,
+        displayAmount: formatBudgetInputAmount(
+          converted,
+          money.displayCurrency,
+        ),
+      };
+    });
   } catch {
     summary = null;
     money = null;
@@ -75,8 +93,8 @@ export default async function SettingsBudgetPage({
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Budget</h2>
         <p className="text-sm text-muted-foreground">
-          Monthly limits per expense category in your display currency (
-          {displayCurrency}). Same limit every month.
+          Budgets convert to your display currency ({displayCurrency}) using
+          Google Finance rates. Saving stores the amount in {displayCurrency}.
         </p>
       </div>
 
@@ -84,7 +102,8 @@ export default async function SettingsBudgetPage({
         <CardHeader>
           <CardTitle>Category budgets</CardTitle>
           <CardDescription>
-            Amounts are stored in {displayCurrency} (change under General).
+            Enter limits in {displayCurrency}. Toggle currency in the header to
+            view converted values.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -98,8 +117,10 @@ export default async function SettingsBudgetPage({
                 key={row.categoryId}
                 categoryId={row.categoryId}
                 categoryName={row.categoryName}
-                defaultBudget={row.defaultBudget}
-                currencyCode={displayCurrency}
+                displayAmount={row.displayAmount}
+                displayCurrency={displayCurrency}
+                storedAmount={row.storedAmount}
+                storedCurrency={row.storedCurrency}
               />
             ))
           )}

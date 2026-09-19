@@ -1,0 +1,1 @@
+ALTER TABLE "categories" ADD COLUMN "budget_currency" varchar(3) DEFAULT 'IDR';

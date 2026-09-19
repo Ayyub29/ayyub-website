@@ -82,13 +82,17 @@ export default async function SettingsCategoriesPage() {
             title="Income"
             rows={income}
             displayCurrency={displayCurrency}
-            formatBudget={(amount) => money?.format(amount, displayCurrency) ?? amount}
+            formatBudget={(amount, budgetCurrency) =>
+              money?.formatConverted(amount, budgetCurrency ?? "IDR") ?? amount
+            }
           />
           <CategoryTable
             title="Expense"
             rows={expense}
             displayCurrency={displayCurrency}
-            formatBudget={(amount) => money?.format(amount, displayCurrency) ?? amount}
+            formatBudget={(amount, budgetCurrency) =>
+              money?.formatConverted(amount, budgetCurrency ?? "IDR") ?? amount
+            }
           />
         </CardContent>
       </Card>
@@ -104,13 +108,14 @@ function CategoryTable({
 }: {
   title: string;
   displayCurrency: string;
-  formatBudget: (amount: string) => string;
+  formatBudget: (amount: string, budgetCurrency: string | null) => string;
   rows: Array<{
     id: string;
     name: string;
     kind: "income" | "expense";
     color: string | null;
     defaultMonthlyBudget: string | null;
+    budgetCurrency: string | null;
   }>;
 }) {
   return (
@@ -151,7 +156,10 @@ function CategoryTable({
                 </TableCell>
                 <TableCell className="text-right">
                   {category.kind === "expense" && category.defaultMonthlyBudget
-                    ? formatBudget(category.defaultMonthlyBudget)
+                    ? formatBudget(
+                        category.defaultMonthlyBudget,
+                        category.budgetCurrency,
+                      )
                     : "—"}
                 </TableCell>
                 <TableCell>
