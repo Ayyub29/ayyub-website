@@ -9,6 +9,7 @@ const navItems = [
   { href: "/dashboard", label: "Monthly summary" },
   { href: "/dashboard/yearly", label: "Yearly summary" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/accounts/overview", label: "Accounts" },
   { href: "/transactions", label: "Transactions" },
   { href: "/settings", label: "Settings" },
 ] as const;

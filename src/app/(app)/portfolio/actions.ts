@@ -66,6 +66,7 @@ export async function createPortfolioTransaction(
 
   revalidatePath("/portfolio");
   revalidatePath("/portfolio/transactions");
+  revalidatePath("/accounts/overview");
   return { ok: true };
 }
 
@@ -84,6 +85,7 @@ export async function deletePortfolioTransaction(
 
   revalidatePath("/portfolio");
   revalidatePath("/portfolio/transactions");
+  revalidatePath("/accounts/overview");
   return { ok: true };
 }
 
@@ -91,6 +93,7 @@ function revalidatePortfolioApps() {
   revalidatePath("/portfolio");
   revalidatePath("/portfolio/transactions");
   revalidatePath("/settings/portfolio-apps");
+  revalidatePath("/accounts/overview");
 }
 
 export async function createPortfolioApplication(
