@@ -6,10 +6,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Monthly summary" },
-  { href: "/dashboard/yearly", label: "Yearly summary" },
-  { href: "/portfolio", label: "Portfolio" },
   { href: "/accounts/overview", label: "Accounts" },
+  { href: "/dashboard", label: "Summary" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/transactions", label: "Transactions" },
   { href: "/settings", label: "Settings" },
 ] as const;
@@ -23,13 +22,15 @@ export function AppNav() {
         const isActive =
           item.href === "/dashboard"
             ? pathname === "/dashboard" ||
-              (pathname.startsWith("/dashboard/") &&
-                !pathname.startsWith("/dashboard/yearly"))
+              pathname.startsWith("/dashboard/")
             : item.href === "/portfolio"
               ? pathname === "/portfolio" ||
                 pathname.startsWith("/portfolio/")
-              : pathname === item.href ||
-                pathname.startsWith(`${item.href}/`);
+              : item.href === "/accounts/overview"
+                ? pathname === "/accounts" ||
+                  pathname.startsWith("/accounts/")
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
 
         return (
           <Link

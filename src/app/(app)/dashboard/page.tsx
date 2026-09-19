@@ -1,56 +1,52 @@
-import { getDisplayMoney } from "@/lib/currency/server-display";
-import { MonthlyBalanceForm } from "@/components/monthly-balance-form";
-import { SavingRateMetricsTable } from "@/components/saving-rate-metrics-table";
-import { SummaryKpiGrid } from "@/components/summary-kpi-grid";
-import { formatBudgetInputAmount, formatMonthYear } from "@/lib/format";
-import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
-import { BudgetStatusBadge } from "@/components/budget-status-badge";
 import { MonthNav } from "@/components/month-nav";
-import { Badge } from "@/components/ui/badge";
+import {
+  SummaryViewToggle,
+  type SummaryView,
+} from "@/components/summary-view-toggle";
+import { YearNav } from "@/components/year-nav";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { getDisplayMoney } from "@/lib/currency/server-display";
+import { formatMonthYear } from "@/lib/format";
+import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
+import { getYearlySummary, parseYear } from "@/lib/money/yearly";
+
+import { DashboardMonthlyView } from "./dashboard-monthly-view";
+import { DashboardYearlyView } from "./dashboard-yearly-view";
 
 export const dynamic = "force-dynamic";
 
 type DashboardPageProps = {
-  searchParams: Promise<{ year?: string; month?: string }>;
+  searchParams: Promise<{ view?: string; year?: string; month?: string }>;
 };
+
+function parseSummaryView(value?: string): SummaryView {
+  return value === "yearly" ? "yearly" : "monthly";
+}
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
+  const view = parseSummaryView(params.view);
   const { year, month } = parseYearMonth(params.year, params.month);
+  const { year: yearOnly } = parseYear(params.year);
 
-  let summary;
   let money;
   let setupRequired = false;
 
   try {
     money = await getDisplayMoney();
-    summary = await getMonthlySummary(year, month, {
-      displayCurrency: money.displayCurrency,
-      rates: money.rates,
-    });
   } catch {
     setupRequired = true;
   }
 
-  if (setupRequired || !summary || !money) {
+  if (setupRequired || !money) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Summary</h1>
         <Card>
           <CardHeader>
             <CardTitle>Connect your database</CardTitle>
@@ -65,203 +61,104 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
-  const expenseRows = summary.byCategory.filter((row) => row.kind === "expense");
-  const incomeRows = summary.byCategory.filter((row) => row.kind === "income");
   const { displayCurrency } = money;
-  const saving = summary.savingRate;
 
-  const idrFormDefault =
-    saving.idrBalance != null
-      ? formatBudgetInputAmount(saving.idrBalance, "IDR")
-      : "";
-  const thbFormDefault =
-    saving.thbBalance != null
-      ? formatBudgetInputAmount(saving.thbBalance, "THB")
-      : "";
+  if (view === "yearly") {
+    let yearlySummary;
+    try {
+      yearlySummary = await getYearlySummary(yearOnly, {
+        displayCurrency: money.displayCurrency,
+        rates: money.rates,
+      });
+    } catch {
+      setupRequired = true;
+    }
+
+    if (setupRequired || !yearlySummary) {
+      return (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-semibold tracking-tight">Summary</h1>
+          <Card>
+            <CardHeader>
+              <CardTitle>Could not load yearly summary</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3">
+              <SummaryViewToggle view={view} year={yearOnly} month={month} />
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Summary</h1>
+                <p className="text-sm text-muted-foreground">
+                  {yearOnly} · all amounts in {displayCurrency}
+                </p>
+              </div>
+            </div>
+            <YearNav year={yearOnly} />
+          </div>
+        </div>
+
+        <DashboardYearlyView
+          year={yearOnly}
+          summary={yearlySummary}
+          money={money}
+        />
+      </div>
+    );
+  }
+
+  let monthlySummary;
+  try {
+    monthlySummary = await getMonthlySummary(year, month, {
+      displayCurrency: money.displayCurrency,
+      rates: money.rates,
+    });
+  } catch {
+    setupRequired = true;
+  }
+
+  if (setupRequired || !monthlySummary) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Summary</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Could not load monthly summary</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
-          <p className="text-sm text-muted-foreground">
-            {formatMonthYear(year, month)} · all amounts in {displayCurrency}
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <SummaryViewToggle view={view} year={year} month={month} />
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Summary</h1>
+              <p className="text-sm text-muted-foreground">
+                {formatMonthYear(year, month)} · all amounts in {displayCurrency}
+              </p>
+            </div>
+          </div>
+          <MonthNav year={year} month={month} />
         </div>
-        <MonthNav year={year} month={month} basePath="/dashboard" />
       </div>
 
-      <SummaryKpiGrid
-        formatAmount={(amount) => money.format(amount, displayCurrency)}
-        income={summary.income}
-        expenses={summary.expenses}
-        expensesExcludingGoalInvestment={summary.expensesExcludingGoalInvestment}
-        net={summary.net}
-        netExcludingGoalInvestment={summary.netExcludingGoalInvestment}
+      <DashboardMonthlyView
+        year={year}
+        month={month}
+        summary={monthlySummary}
+        money={money}
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly saving rate</CardTitle>
-          <CardDescription>
-            Enter end-of-month IDR and THB account balances. Total balance sums
-            both in {displayCurrency}. Save amount is the change in total
-            balance vs the previous month; saving ratio is save amount divided
-            by income.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <MonthlyBalanceForm
-            year={year}
-            month={month}
-            idrDefault={idrFormDefault}
-            thbDefault={thbFormDefault}
-          />
-
-          <SavingRateMetricsTable
-            saving={saving}
-            displayCurrency={displayCurrency}
-            formatDisplay={(amount) => money.format(amount, displayCurrency)}
-            formatIdr={(amount) => money.format(amount, "IDR")}
-            formatThb={(amount) => money.format(amount, "THB")}
-          />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Budget vs actual</CardTitle>
-            <CardDescription>
-              Configure budgets in Settings → Budget.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Budget</TableHead>
-                  <TableHead className="text-right">Spent</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenseRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground">
-                      No expense categories yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  expenseRows
-                    .filter((row) => row.actual > 0 || row.planned > 0)
-                    .map((row) => (
-                    <TableRow key={row.categoryId}>
-                      <TableCell>{row.categoryName}</TableCell>
-                      <TableCell className="text-right">
-                        {money.format(row.planned, displayCurrency)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money.format(row.actual, displayCurrency)}
-                      </TableCell>
-                      <TableCell>
-                        <BudgetStatusBadge status={row.status} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Income by category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {incomeRows.every((row) => row.actual === 0) ? (
-                  <TableRow>
-                    <TableCell colSpan={2} className="text-muted-foreground">
-                      No income recorded this month.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  incomeRows
-                    .filter((row) => row.actual > 0)
-                    .map((row) => (
-                      <TableRow key={row.categoryId}>
-                        <TableCell>{row.categoryName}</TableCell>
-                        <TableCell className="text-right">
-                          {money.format(row.actual, displayCurrency)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Transactions this month</CardTitle>
-          <CardDescription>{summary.transactions.length} entries</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Value ({displayCurrency})</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {summary.transactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground">
-                    No transactions yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                summary.transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell>{tx.transactionDate}</TableCell>
-                    <TableCell>{tx.name}</TableCell>
-                    <TableCell>
-                      {tx.category ? (
-                        <Badge variant="secondary">{tx.category.name}</Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div>{money.formatConverted(tx.amount, tx.currency)}</div>
-                      {tx.currency !== displayCurrency ? (
-                        <div className="text-xs text-muted-foreground">
-                          {tx.amount} {tx.currency}
-                        </div>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }

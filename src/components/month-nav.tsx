@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 type MonthNavProps = {
   year: number;
   month: number;
-  basePath: string;
+  /** @deprecated use dashboard month nav without basePath */
+  basePath?: string;
 };
 
 function shiftMonth(year: number, month: number, delta: number) {
@@ -15,14 +16,18 @@ function shiftMonth(year: number, month: number, delta: number) {
   return { year: date.getFullYear(), month: date.getMonth() + 1 };
 }
 
-export function MonthNav({ year, month, basePath }: MonthNavProps) {
+function monthHref(year: number, month: number) {
+  return `/dashboard?view=monthly&year=${year}&month=${month}`;
+}
+
+export function MonthNav({ year, month }: MonthNavProps) {
   const prev = shiftMonth(year, month, -1);
   const next = shiftMonth(year, month, 1);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Link
-        href={`${basePath}?year=${prev.year}&month=${prev.month}`}
+        href={monthHref(prev.year, prev.month)}
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
         Previous
@@ -31,7 +36,7 @@ export function MonthNav({ year, month, basePath }: MonthNavProps) {
         {formatMonthYear(year, month)}
       </span>
       <Link
-        href={`${basePath}?year=${next.year}&month=${next.month}`}
+        href={monthHref(next.year, next.month)}
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
         Next

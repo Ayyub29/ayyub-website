@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { callbackUrl } = await searchParams;
 
   if (session?.user) {
-    redirect(callbackUrl ?? "/dashboard");
+    redirect(callbackUrl ?? "/accounts/overview");
   }
 
   return (
@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SignInButton callbackUrl={callbackUrl ?? "/dashboard"} />
+          <SignInButton callbackUrl={callbackUrl ?? "/accounts/overview"} />
         </CardContent>
       </Card>
     </div>
