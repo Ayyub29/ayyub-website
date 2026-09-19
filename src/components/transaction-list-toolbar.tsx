@@ -40,7 +40,7 @@ export function TransactionListToolbar({
       <form
         method="get"
         action={basePath}
-        className="flex flex-wrap items-end gap-3"
+        className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end"
       >
         <div className="space-y-1">
           <Label htmlFor="tx-from">From</Label>
@@ -49,7 +49,7 @@ export function TransactionListToolbar({
             name="from"
             type="date"
             defaultValue={query.from}
-            className="w-[11rem]"
+            className="w-full min-w-0 sm:w-[11rem]"
           />
         </div>
         <div className="space-y-1">
@@ -59,34 +59,42 @@ export function TransactionListToolbar({
             name="to"
             type="date"
             defaultValue={query.to}
-            className="w-[11rem]"
+            className="w-full min-w-0 sm:w-[11rem]"
           />
         </div>
-        <button
-          type="submit"
-          className={cn(buttonVariants({ variant: "default", size: "sm" }))}
-        >
-          Apply range
-        </button>
-        {!query.isDefaultRange ? (
-          <Link
-            href={basePath}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        <div className="flex flex-wrap gap-2 sm:contents">
+          <button
+            type="submit"
+            className={cn(
+              buttonVariants({ variant: "default", size: "sm" }),
+              "w-full sm:w-auto",
+            )}
           >
-            Last 3 months
-          </Link>
-        ) : null}
+            Apply range
+          </button>
+          {!query.isDefaultRange ? (
+            <Link
+              href={basePath}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "w-full text-center sm:w-auto",
+              )}
+            >
+              Last 3 months
+            </Link>
+          ) : null}
+        </div>
       </form>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-        <span>
+      <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
+        <span className="min-w-0 break-words">
           {rangeLabel}
           {totalCount > 0
             ? ` · ${showingFrom}–${showingTo} of ${totalCount}`
             : " · No entries in range"}
         </span>
         {totalPages > 1 ? (
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
             {page > 1 ? (
               <Link
                 href={hrefForPage(page - 1)}

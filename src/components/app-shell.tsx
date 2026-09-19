@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { signOut } from "@/auth";
+import { AppMobileNav } from "@/components/app-mobile-nav";
 import { AppNav } from "@/components/app-nav";
 import { CurrencyToggle } from "@/components/currency-toggle";
 import { Button } from "@/components/ui/button";
@@ -21,17 +20,15 @@ export function AppShell({
   return (
     <div className="min-h-full bg-muted/30">
       <header className="border-b bg-background">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="font-semibold tracking-tight">
-              Ayyub Finance
-            </Link>
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-6">
+            <AppMobileNav />
             <AppNav />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <CurrencyToggle value={displayCurrency} />
             {userEmail ? (
-              <span className="hidden text-sm text-muted-foreground md:inline">
+              <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground lg:inline">
                 {userEmail}
               </span>
             ) : null}
@@ -41,8 +38,9 @@ export function AppShell({
                 await signOut({ redirectTo: "/" });
               }}
             >
-              <Button type="submit" variant="outline" size="sm">
-                Sign out
+              <Button type="submit" variant="outline" size="sm" className="px-2.5 sm:px-3">
+                <span className="hidden sm:inline">Sign out</span>
+                <span className="sm:hidden">Out</span>
               </Button>
             </form>
           </div>
