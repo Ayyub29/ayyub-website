@@ -5,6 +5,7 @@ import {
 } from "@/lib/currency/google-rates";
 
 import type { PortfolioCategory } from "./constants";
+import { holdingQuoteKey } from "./holding-identity";
 import type { HoldingRow, PortfolioSummary } from "./summary";
 
 /** IDX board lot size (1 lot = 100 shares). */
@@ -291,7 +292,7 @@ export async function enrichPortfolioSummaryWithQuotes(
   const holdingsToQuote: HoldingRow[] = [];
 
   for (const row of summary.holdings) {
-    const key = `${row.category}|${row.name.toLowerCase()}`;
+    const key = holdingQuoteKey(row.category, row.name);
     if (uniqueKeys.has(key)) {
       continue;
     }
@@ -304,14 +305,14 @@ export async function enrichPortfolioSummaryWithQuotes(
   const quoteByKey = new Map<string, PriceQuote | null>();
   await Promise.all(
     holdingsToQuote.map(async (holding) => {
-      const key = `${holding.category}|${holding.name.toLowerCase()}`;
+      const key = holdingQuoteKey(holding.category, holding.name);
       const quote = await quoteForHolding(holding);
       quoteByKey.set(key, quote);
     }),
   );
 
   const attachValuation = (row: HoldingRow): ValuedHoldingRow => {
-    const key = `${row.category}|${row.name.toLowerCase()}`;
+    const key = holdingQuoteKey(row.category, row.name);
     const quote = quoteByKey.get(key) ?? null;
     return {
       ...row,

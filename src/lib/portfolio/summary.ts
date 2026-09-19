@@ -6,6 +6,11 @@ import {
 
 import type { PortfolioCategory, PortfolioTxType } from "./constants";
 import { PORTFOLIO_CATEGORY_LABELS } from "./constants";
+import {
+  holdingPositionKey,
+  isOpenPosition,
+  normalizeHoldingName,
+} from "./holding-identity";
 
 export type PortfolioTxRow = {
   id: string;
@@ -55,15 +60,15 @@ export type PortfolioSummary = {
   displayCurrency: SupportedCurrency;
 };
 
-type HoldingKey = string;
-
-function holdingKey(
-  applicationId: string,
-  category: PortfolioCategory,
-  name: string,
-): HoldingKey {
-  return `${applicationId}|${category}|${name.toLowerCase()}`;
-}
+type PositionState = {
+  applicationId: string;
+  applicationName: string;
+  category: PortfolioCategory;
+  name: string;
+  totalBuyUnits: number;
+  totalSellUnits: number;
+  netInvestedByCurrency: CashByCurrency;
+};
 
 function toDisplay(
   amount: number,
@@ -90,17 +95,7 @@ export function buildPortfolioSummary(
   );
 
   const idleByApp = new Map<string, CashByCurrency>();
-  const holdings = new Map<
-    HoldingKey,
-    {
-      applicationId: string;
-      applicationName: string;
-      category: PortfolioCategory;
-      name: string;
-      quantity: number;
-      netInvestedByCurrency: CashByCurrency;
-    }
-  >();
+  const holdings = new Map<string, PositionState>();
 
   for (const tx of sorted) {
     const appCash = idleByApp.get(tx.applicationId) ?? {};
@@ -122,16 +117,18 @@ export function buildPortfolioSummary(
         if (!tx.category) {
           break;
         }
-        const key = holdingKey(tx.applicationId, tx.category, tx.name);
+        const canonical = normalizeHoldingName(tx.name, tx.category);
+        const key = holdingPositionKey(tx.applicationId, tx.category, tx.name);
         const existing = holdings.get(key) ?? {
           applicationId: tx.applicationId,
           applicationName: tx.applicationName,
           category: tx.category,
-          name: tx.name,
-          quantity: 0,
+          name: canonical,
+          totalBuyUnits: 0,
+          totalSellUnits: 0,
           netInvestedByCurrency: {},
         };
-        existing.quantity += units;
+        existing.totalBuyUnits += units;
         addCash(existing.netInvestedByCurrency, tx.currency, amount);
         holdings.set(key, existing);
         break;
@@ -141,21 +138,21 @@ export function buildPortfolioSummary(
         if (!tx.category) {
           break;
         }
-        const key = holdingKey(tx.applicationId, tx.category, tx.name);
+        const key = holdingPositionKey(tx.applicationId, tx.category, tx.name);
         const existing = holdings.get(key);
         if (!existing) {
           break;
         }
-        const qtyBefore = existing.quantity;
-        if (qtyBefore > 0 && units > 0) {
-          const ratio = Math.min(1, units / qtyBefore);
+        const openBefore = existing.totalBuyUnits - existing.totalSellUnits;
+        if (openBefore > 0 && units > 0) {
+          const ratio = Math.min(1, units / openBefore);
           for (const [cur, invested] of Object.entries(
             existing.netInvestedByCurrency,
           )) {
             existing.netInvestedByCurrency[cur] = invested * (1 - ratio);
           }
         }
-        existing.quantity = Math.max(0, existing.quantity - units);
+        existing.totalSellUnits += units;
         holdings.set(key, existing);
         break;
       }
@@ -168,9 +165,11 @@ export function buildPortfolioSummary(
 
   const holdingRows: HoldingRow[] = [];
   for (const h of holdings.values()) {
-    if (h.quantity <= 0) {
+    if (!isOpenPosition(h.totalBuyUnits, h.totalSellUnits)) {
       continue;
     }
+
+    const quantity = h.totalBuyUnits - h.totalSellUnits;
     let netInvestedDisplay = 0;
     let netInvestedRaw = 0;
     for (const [cur, val] of Object.entries(h.netInvestedByCurrency)) {
@@ -182,15 +181,16 @@ export function buildPortfolioSummary(
       applicationName: h.applicationName,
       category: h.category,
       name: h.name,
-      quantity: h.quantity,
+      quantity,
       netInvested: netInvestedRaw,
       netInvestedDisplay,
     });
   }
 
-  holdingRows.sort((a, b) =>
-    a.applicationName.localeCompare(b.applicationName) ||
-    a.name.localeCompare(b.name),
+  holdingRows.sort(
+    (a, b) =>
+      a.applicationName.localeCompare(b.applicationName) ||
+      a.name.localeCompare(b.name),
   );
 
   const byApplication: ApplicationSummary[] = [];
@@ -212,7 +212,9 @@ export function buildPortfolioSummary(
     });
   }
 
-  byApplication.sort((a, b) => a.applicationName.localeCompare(b.applicationName));
+  byApplication.sort((a, b) =>
+    a.applicationName.localeCompare(b.applicationName),
+  );
 
   const categoryMap = new Map<PortfolioCategory, HoldingRow[]>();
   for (const row of holdingRows) {
@@ -226,7 +228,10 @@ export function buildPortfolioSummary(
       category,
       categoryLabel: PORTFOLIO_CATEGORY_LABELS[category],
       holdings: rows,
-      netInvestedDisplay: rows.reduce((sum, r) => sum + r.netInvestedDisplay, 0),
+      netInvestedDisplay: rows.reduce(
+        (sum, r) => sum + r.netInvestedDisplay,
+        0,
+      ),
     }))
     .sort((a, b) => a.categoryLabel.localeCompare(b.categoryLabel));
 

@@ -5,6 +5,7 @@ import {
 } from "@/lib/currency/google-rates";
 
 import type { PortfolioCategory } from "./constants";
+import { holdingQuoteKey } from "./holding-identity";
 import { IDX_SHARES_PER_LOT } from "./quotes";
 import type { ValuedHoldingRow, ValuedPortfolioSummary } from "./quotes";
 
@@ -192,10 +193,7 @@ export async function buildDividendProjection(
     }
     const ticker = normalizeIdxTicker(holding.name);
     if (ticker) {
-      quoteKeyToTicker.set(
-        `${holding.category}|${holding.name.toLowerCase()}`,
-        ticker,
-      );
+      quoteKeyToTicker.set(holdingQuoteKey(holding.category, holding.name), ticker);
     }
   }
 
