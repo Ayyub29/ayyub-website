@@ -81,7 +81,12 @@ export function previousYearMonth(year: number, month: number) {
   return { year, month: month - 1 };
 }
 
-function totalBalanceInDisplay(
+export type AccountBalanceRow = {
+  idrBalance: string;
+  thbBalance: string;
+};
+
+export function totalBalanceInDisplay(
   idrBalance: string | null | undefined,
   thbBalance: string | null | undefined,
   options: MonthlySummaryOptions,
@@ -95,8 +100,93 @@ function totalBalanceInDisplay(
     return null;
   }
   return (
-    toDisplay(idr, "IDR", options) + toDisplay(thb, "THB", options)
+    toDisplayAmount(idr, "IDR", options) +
+    toDisplayAmount(thb, "THB", options)
   );
+}
+
+export function buildSavingRate(
+  income: number,
+  expense: number,
+  investment: number,
+  balanceRow: AccountBalanceRow | null | undefined,
+  previousBalanceRow: AccountBalanceRow | null | undefined,
+  options: MonthlySummaryOptions,
+): MonthlySavingRate {
+  const idrBalance = balanceRow ? Number(balanceRow.idrBalance) : null;
+  const thbBalance = balanceRow ? Number(balanceRow.thbBalance) : null;
+  const totalBalance = balanceRow
+    ? totalBalanceInDisplay(
+        balanceRow.idrBalance,
+        balanceRow.thbBalance,
+        options,
+      )
+    : null;
+  const previousTotalBalance = previousBalanceRow
+    ? totalBalanceInDisplay(
+        previousBalanceRow.idrBalance,
+        previousBalanceRow.thbBalance,
+        options,
+      )
+    : null;
+
+  const saveAmount =
+    totalBalance != null && previousTotalBalance != null
+      ? totalBalance - previousTotalBalance
+      : null;
+
+  const savingRatio =
+    saveAmount != null && income > 0 ? saveAmount / income : null;
+
+  return {
+    income,
+    expense,
+    investment,
+    idrBalance,
+    thbBalance,
+    totalBalance,
+    previousTotalBalance,
+    saveAmount,
+    savingRatio,
+  };
+}
+
+export function accumulateFlowTotals(
+  transactions: Array<{
+    amount: string;
+    currency: string;
+    category: { name: string; kind: "income" | "expense" } | null;
+  }>,
+  options: MonthlySummaryOptions,
+) {
+  let income = 0;
+  let expenses = 0;
+  let expensesExcludingGoalInvestment = 0;
+  let investment = 0;
+
+  for (const tx of transactions) {
+    const converted = toDisplayAmount(Number(tx.amount), tx.currency, options);
+    if (tx.category?.kind === "income") {
+      income += converted;
+    } else if (tx.category?.kind === "expense") {
+      expenses += converted;
+      if (isInvestmentCategory(tx.category.name)) {
+        investment += converted;
+      }
+      if (!isExcludedFromSummaryExpense(tx.category.name)) {
+        expensesExcludingGoalInvestment += converted;
+      }
+    }
+  }
+
+  return {
+    income,
+    expenses,
+    expensesExcludingGoalInvestment,
+    investment,
+    net: income - expenses,
+    netExcludingGoalInvestment: income - expensesExcludingGoalInvestment,
+  };
 }
 
 function budgetStatus(planned: number, actual: number): BudgetStatus {
@@ -112,7 +202,7 @@ function budgetStatus(planned: number, actual: number): BudgetStatus {
   return "on_track";
 }
 
-function toDisplay(
+export function toDisplayAmount(
   amount: number,
   from: string,
   options: MonthlySummaryOptions,
@@ -166,24 +256,9 @@ export async function getMonthlySummary(
   ]);
 
   const actualByCategory = new Map<string, number>();
-  let income = 0;
-  let expenses = 0;
-  let expensesExcludingGoalInvestment = 0;
-  let investment = 0;
 
   for (const tx of monthTransactions) {
-    const converted = toDisplay(Number(tx.amount), tx.currency, options);
-    if (tx.category?.kind === "income") {
-      income += converted;
-    } else if (tx.category?.kind === "expense") {
-      expenses += converted;
-      if (tx.category && isInvestmentCategory(tx.category.name)) {
-        investment += converted;
-      }
-      if (!isExcludedFromSummaryExpense(tx.category.name)) {
-        expensesExcludingGoalInvestment += converted;
-      }
-    }
+    const converted = toDisplayAmount(Number(tx.amount), tx.currency, options);
 
     if (tx.categoryId) {
       actualByCategory.set(
@@ -193,10 +268,19 @@ export async function getMonthlySummary(
     }
   }
 
+  const {
+    income,
+    expenses,
+    expensesExcludingGoalInvestment,
+    investment,
+    net,
+    netExcludingGoalInvestment,
+  } = accumulateFlowTotals(monthTransactions, options);
+
   const byCategory: CategoryMonthRow[] = categories.map((category) => {
     const actual = actualByCategory.get(category.id) ?? 0;
     const planned = category.defaultMonthlyBudget
-      ? toDisplay(
+      ? toDisplayAmount(
           Number(category.defaultMonthlyBudget),
           category.budgetCurrency ?? options.displayCurrency,
           options,
@@ -220,30 +304,14 @@ export async function getMonthlySummary(
     };
   });
 
-  const idrBalance = balanceRow ? Number(balanceRow.idrBalance) : null;
-  const thbBalance = balanceRow ? Number(balanceRow.thbBalance) : null;
-  const totalBalance = balanceRow
-    ? totalBalanceInDisplay(
-        balanceRow.idrBalance,
-        balanceRow.thbBalance,
-        options,
-      )
-    : null;
-  const previousTotalBalance = previousBalanceRow
-    ? totalBalanceInDisplay(
-        previousBalanceRow.idrBalance,
-        previousBalanceRow.thbBalance,
-        options,
-      )
-    : null;
-
-  const saveAmount =
-    totalBalance != null && previousTotalBalance != null
-      ? totalBalance - previousTotalBalance
-      : null;
-
-  const savingRatio =
-    saveAmount != null && income > 0 ? saveAmount / income : null;
+  const savingRate = buildSavingRate(
+    income,
+    expensesExcludingGoalInvestment,
+    investment,
+    balanceRow,
+    previousBalanceRow,
+    options,
+  );
 
   return {
     year,
@@ -252,19 +320,9 @@ export async function getMonthlySummary(
     expenses,
     expensesExcludingGoalInvestment,
     investment,
-    net: income - expenses,
-    netExcludingGoalInvestment: income - expensesExcludingGoalInvestment,
-    savingRate: {
-      income,
-      expense: expensesExcludingGoalInvestment,
-      investment,
-      idrBalance,
-      thbBalance,
-      totalBalance,
-      previousTotalBalance,
-      saveAmount,
-      savingRatio,
-    },
+    net,
+    netExcludingGoalInvestment,
+    savingRate,
     displayCurrency: options.displayCurrency,
     byCategory,
     transactions: monthTransactions.map((tx) => ({

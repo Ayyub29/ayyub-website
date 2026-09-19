@@ -1,6 +1,8 @@
 import { getDisplayMoney } from "@/lib/currency/server-display";
 import { MonthlyBalanceForm } from "@/components/monthly-balance-form";
-import { formatBudgetInputAmount, formatMonthYear, formatPercent } from "@/lib/format";
+import { SavingRateMetricsTable } from "@/components/saving-rate-metrics-table";
+import { SummaryKpiGrid } from "@/components/summary-kpi-grid";
+import { formatBudgetInputAmount, formatMonthYear } from "@/lib/format";
 import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
 import { BudgetStatusBadge } from "@/components/budget-status-badge";
 import { MonthNav } from "@/components/month-nav";
@@ -89,54 +91,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <MonthNav year={year} month={month} basePath="/dashboard" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Income</CardDescription>
-            <CardTitle className="text-2xl">
-              {money.format(summary.income, displayCurrency)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total expenses</CardDescription>
-            <CardTitle className="text-2xl">
-              {money.format(summary.expenses, displayCurrency)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Expenses (excl. Goal & Investment)</CardDescription>
-            <CardTitle className="text-2xl">
-              {money.format(
-                summary.expensesExcludingGoalInvestment,
-                displayCurrency,
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Net</CardDescription>
-            <CardTitle className="text-2xl">
-              {money.format(summary.net, displayCurrency)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Net (excl. Goal & Investment)</CardDescription>
-            <CardTitle className="text-2xl">
-              {money.format(
-                summary.netExcludingGoalInvestment,
-                displayCurrency,
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      <SummaryKpiGrid
+        formatAmount={(amount) => money.format(amount, displayCurrency)}
+        income={summary.income}
+        expenses={summary.expenses}
+        expensesExcludingGoalInvestment={summary.expensesExcludingGoalInvestment}
+        net={summary.net}
+        netExcludingGoalInvestment={summary.netExcludingGoalInvestment}
+      />
 
       <Card>
         <CardHeader>
@@ -156,78 +118,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             thbDefault={thbFormDefault}
           />
 
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Income</TableCell>
-                <TableCell className="text-right">
-                  {money.format(saving.income, displayCurrency)}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">
-                  Expense (excl. Goal & Investment)
-                </TableCell>
-                <TableCell className="text-right">
-                  {money.format(saving.expense, displayCurrency)}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Investment</TableCell>
-                <TableCell className="text-right">
-                  {money.format(saving.investment, displayCurrency)}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">IDR account balance</TableCell>
-                <TableCell className="text-right">
-                  {saving.idrBalance != null
-                    ? money.format(saving.idrBalance, "IDR")
-                    : "—"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">THB account balance</TableCell>
-                <TableCell className="text-right">
-                  {saving.thbBalance != null
-                    ? money.format(saving.thbBalance, "THB")
-                    : "—"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">
-                  Total balance ({displayCurrency})
-                </TableCell>
-                <TableCell className="text-right">
-                  {saving.totalBalance != null
-                    ? money.format(saving.totalBalance, displayCurrency)
-                    : "—"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Save amount</TableCell>
-                <TableCell className="text-right">
-                  {saving.saveAmount != null
-                    ? money.format(saving.saveAmount, displayCurrency)
-                    : "—"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Saving ratio</TableCell>
-                <TableCell className="text-right">
-                  {saving.savingRatio != null
-                    ? formatPercent(saving.savingRatio)
-                    : "—"}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-          {saving.saveAmount == null && saving.totalBalance != null ? (
-            <p className="text-sm text-muted-foreground">
-              Save amount and saving ratio appear once you enter balances for
-              the previous month as well.
-            </p>
-          ) : null}
+          <SavingRateMetricsTable
+            saving={saving}
+            displayCurrency={displayCurrency}
+            formatDisplay={(amount) => money.format(amount, displayCurrency)}
+            formatIdr={(amount) => money.format(amount, "IDR")}
+            formatThb={(amount) => money.format(amount, "THB")}
+          />
         </CardContent>
       </Card>
 

@@ -36,6 +36,12 @@ export function formatMonthYear(year: number, month: number) {
   });
 }
 
+export function formatMonthShort(month: number) {
+  return new Date(2000, month - 1, 1).toLocaleDateString("en-US", {
+    month: "short",
+  });
+}
+
 export function formatPercent(ratio: number) {
   return new Intl.NumberFormat("en-US", {
     style: "percent",
