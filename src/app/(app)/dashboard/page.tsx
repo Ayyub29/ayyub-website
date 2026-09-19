@@ -1,5 +1,6 @@
+import { getDisplayMoney } from "@/lib/currency/server-display";
+import { formatMonthYear } from "@/lib/format";
 import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
-import { formatMoney, formatMonthYear } from "@/lib/format";
 import { BudgetStatusBadge } from "@/components/budget-status-badge";
 import { MonthNav } from "@/components/month-nav";
 import { Badge } from "@/components/ui/badge";
@@ -30,15 +31,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const { year, month } = parseYearMonth(params.year, params.month);
 
   let summary;
+  let money;
   let setupRequired = false;
 
   try {
-    summary = await getMonthlySummary(year, month);
+    money = await getDisplayMoney();
+    summary = await getMonthlySummary(year, month, {
+      displayCurrency: money.displayCurrency,
+      rates: money.rates,
+    });
   } catch {
     setupRequired = true;
   }
 
-  if (setupRequired || !summary) {
+  if (setupRequired || !summary || !money) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
@@ -58,6 +64,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const expenseRows = summary.byCategory.filter((row) => row.kind === "expense");
   const incomeRows = summary.byCategory.filter((row) => row.kind === "income");
+  const { displayCurrency } = money;
 
   return (
     <div className="space-y-8">
@@ -65,7 +72,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
           <p className="text-sm text-muted-foreground">
-            Personal money management for {formatMonthYear(year, month)}.
+            {formatMonthYear(year, month)} · all amounts in {displayCurrency}
           </p>
         </div>
         <MonthNav year={year} month={month} basePath="/dashboard" />
@@ -76,7 +83,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardHeader className="pb-2">
             <CardDescription>Income</CardDescription>
             <CardTitle className="text-2xl">
-              {formatMoney(summary.income)}
+              {money.format(summary.income, displayCurrency)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -84,14 +91,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardHeader className="pb-2">
             <CardDescription>Expenses</CardDescription>
             <CardTitle className="text-2xl">
-              {formatMoney(summary.expenses)}
+              {money.format(summary.expenses, displayCurrency)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Net</CardDescription>
-            <CardTitle className="text-2xl">{formatMoney(summary.net)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {money.format(summary.net, displayCurrency)}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -101,7 +110,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardHeader>
             <CardTitle>Budget vs actual</CardTitle>
             <CardDescription>
-              Expense categories — monthly limits on the Budget page.
+              Configure budgets in Settings → Budget.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -126,10 +135,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <TableRow key={row.categoryId}>
                       <TableCell>{row.categoryName}</TableCell>
                       <TableCell className="text-right">
-                        {formatMoney(row.planned, row.currency)}
+                        {money.format(row.planned, displayCurrency)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatMoney(row.actual, row.currency)}
+                        {money.format(row.actual, displayCurrency)}
                       </TableCell>
                       <TableCell>
                         <BudgetStatusBadge status={row.status} />
@@ -168,7 +177,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <TableRow key={row.categoryId}>
                         <TableCell>{row.categoryName}</TableCell>
                         <TableCell className="text-right">
-                          {formatMoney(row.actual, row.currency)}
+                          {money.format(row.actual, displayCurrency)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -191,14 +200,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <TableHead>Date</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Value</TableHead>
+                <TableHead className="text-right">Value ({displayCurrency})</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {summary.transactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-muted-foreground">
-                    No transactions yet. Add one from the Transactions page.
+                    No transactions yet.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -214,7 +223,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatMoney(tx.amount, tx.currency)}
+                      <div>{money.formatConverted(tx.amount, tx.currency)}</div>
+                      {tx.currency !== displayCurrency ? (
+                        <div className="text-xs text-muted-foreground">
+                          {tx.amount} {tx.currency}
+                        </div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,6 +1,11 @@
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 
 import { getDb, schema } from "@/db";
+import type { SupportedCurrency } from "@/lib/currencies";
+import {
+  convertWithMatrix,
+  type ExchangeRateMatrix,
+} from "@/lib/currency/google-rates";
 
 export type BudgetStatus = "over" | "on_track" | "under" | "no_budget";
 
@@ -9,7 +14,6 @@ export type CategoryMonthRow = {
   categoryName: string;
   kind: "income" | "expense";
   color: string | null;
-  currency: string;
   planned: number;
   actual: number;
   variance: number;
@@ -22,6 +26,7 @@ export type MonthlySummary = {
   income: number;
   expenses: number;
   net: number;
+  displayCurrency: SupportedCurrency;
   byCategory: CategoryMonthRow[];
   transactions: Array<{
     id: string;
@@ -31,6 +36,11 @@ export type MonthlySummary = {
     transactionDate: string;
     category: { name: string; kind: "income" | "expense" } | null;
   }>;
+};
+
+export type MonthlySummaryOptions = {
+  displayCurrency: SupportedCurrency;
+  rates: ExchangeRateMatrix;
 };
 
 function monthBounds(year: number, month: number) {
@@ -52,41 +62,34 @@ function budgetStatus(planned: number, actual: number): BudgetStatus {
   return "on_track";
 }
 
+function toDisplay(
+  amount: number,
+  from: string,
+  options: MonthlySummaryOptions,
+): number {
+  const fromCurrency = (
+    from.length === 3 ? from : options.displayCurrency
+  ) as SupportedCurrency;
+  return convertWithMatrix(
+    amount,
+    fromCurrency,
+    options.displayCurrency,
+    options.rates,
+  );
+}
+
 export async function getMonthlySummary(
   year: number,
   month: number,
+  options: MonthlySummaryOptions,
 ): Promise<MonthlySummary> {
   const db = getDb();
   const { start, end } = monthBounds(year, month);
 
-  const [categoryRows, monthTransactions] = await Promise.all([
-    db
-      .select({
-        categoryId: schema.categories.id,
-        categoryName: schema.categories.name,
-        kind: schema.categories.kind,
-        color: schema.categories.color,
-        defaultBudget: schema.categories.defaultMonthlyBudget,
-        actual: sql<string>`coalesce(sum(${schema.transactions.amount}), 0)`,
-        sampleCurrency: sql<string>`max(${schema.transactions.currency})`,
-      })
-      .from(schema.categories)
-      .leftJoin(
-        schema.transactions,
-        and(
-          eq(schema.transactions.categoryId, schema.categories.id),
-          gte(schema.transactions.transactionDate, start),
-          lte(schema.transactions.transactionDate, end),
-        ),
-      )
-      .groupBy(
-        schema.categories.id,
-        schema.categories.name,
-        schema.categories.kind,
-        schema.categories.color,
-        schema.categories.defaultMonthlyBudget,
-      )
-      .orderBy(schema.categories.sortOrder, schema.categories.name),
+  const [categories, monthTransactions] = await Promise.all([
+    db.query.categories.findMany({
+      orderBy: (cat, { asc }) => [asc(cat.sortOrder), asc(cat.name)],
+    }),
     db.query.transactions.findMany({
       where: and(
         gte(schema.transactions.transactionDate, start),
@@ -97,32 +100,44 @@ export async function getMonthlySummary(
     }),
   ]);
 
+  const actualByCategory = new Map<string, number>();
   let income = 0;
   let expenses = 0;
 
-  const byCategory: CategoryMonthRow[] = categoryRows.map((row) => {
-    const actual = Number(row.actual);
-    const planned = Number(row.defaultBudget ?? 0);
-
-    if (row.kind === "income") {
-      income += actual;
-    } else {
-      expenses += actual;
+  for (const tx of monthTransactions) {
+    const converted = toDisplay(Number(tx.amount), tx.currency, options);
+    if (tx.category?.kind === "income") {
+      income += converted;
+    } else if (tx.category?.kind === "expense") {
+      expenses += converted;
     }
 
-    const variance = row.kind === "expense" ? planned - actual : actual - planned;
+    if (tx.categoryId) {
+      actualByCategory.set(
+        tx.categoryId,
+        (actualByCategory.get(tx.categoryId) ?? 0) + converted,
+      );
+    }
+  }
+
+  const byCategory: CategoryMonthRow[] = categories.map((category) => {
+    const actual = actualByCategory.get(category.id) ?? 0;
+    const planned = Number(category.defaultMonthlyBudget ?? 0);
+    const variance =
+      category.kind === "expense" ? planned - actual : actual - planned;
 
     return {
-      categoryId: row.categoryId,
-      categoryName: row.categoryName,
-      kind: row.kind,
-      color: row.color,
-      currency: row.sampleCurrency ?? "IDR",
+      categoryId: category.id,
+      categoryName: category.name,
+      kind: category.kind,
+      color: category.color,
       planned,
       actual,
       variance,
       status:
-        row.kind === "expense" ? budgetStatus(planned, actual) : "no_budget",
+        category.kind === "expense"
+          ? budgetStatus(planned, actual)
+          : "no_budget",
     };
   });
 
@@ -132,6 +147,7 @@ export async function getMonthlySummary(
     income,
     expenses,
     net: income - expenses,
+    displayCurrency: options.displayCurrency,
     byCategory,
     transactions: monthTransactions.map((tx) => ({
       id: tx.id,

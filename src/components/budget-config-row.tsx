@@ -13,6 +13,7 @@ type BudgetConfigRowProps = {
   categoryId: string;
   categoryName: string;
   defaultBudget: string | null;
+  currencyCode: string;
 };
 
 const initialState: ActionResult | null = null;
@@ -21,6 +22,7 @@ export function BudgetConfigRow({
   categoryId,
   categoryName,
   defaultBudget,
+  currencyCode,
 }: BudgetConfigRowProps) {
   const [state, formAction, pending] = useActionState(
     updateCategoryDefaultBudget,
@@ -37,7 +39,9 @@ export function BudgetConfigRow({
       <form action={formAction} className="flex flex-1 items-end gap-2">
         <input type="hidden" name="categoryId" value={categoryId} />
         <div className="flex-1 space-y-1">
-          <label className="text-xs text-muted-foreground">Amount</label>
+          <label className="text-xs text-muted-foreground">
+            Amount ({currencyCode})
+          </label>
           <Input
             key={`default-${categoryId}-${defaultBudget ?? ""}`}
             name="defaultMonthlyBudget"

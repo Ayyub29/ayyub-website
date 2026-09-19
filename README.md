@@ -79,8 +79,9 @@ Open [http://localhost:3000](http://localhost:3000) → sign in → **Dashboard*
 | `/dashboard` | Monthly summary + recent activity |
 | `/transactions` | Transaction ledger |
 | `/accounts` | Account list |
-| `/categories` | Income/expense categories |
-| `/budget` | Planned vs actual (current month) |
+| `/settings/general` | Display currency (IDR / USD / THB) via Google Finance rates |
+| `/settings/categories` | Category CRUD |
+| `/settings/budget` | Monthly budget limits & status |
 
 ## Deploy (Vercel)
 

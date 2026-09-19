@@ -2,15 +2,22 @@ import Link from "next/link";
 
 import { signOut } from "@/auth";
 import { AppNav } from "@/components/app-nav";
+import { CurrencyToggle } from "@/components/currency-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import type { SupportedCurrency } from "@/lib/currencies";
 
 type AppShellProps = {
   children: React.ReactNode;
   userEmail?: string | null;
+  displayCurrency: SupportedCurrency;
 };
 
-export function AppShell({ children, userEmail }: AppShellProps) {
+export function AppShell({
+  children,
+  userEmail,
+  displayCurrency,
+}: AppShellProps) {
   return (
     <div className="min-h-full bg-muted/30">
       <header className="border-b bg-background">
@@ -22,6 +29,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
             <AppNav />
           </div>
           <div className="flex items-center gap-3">
+            <CurrencyToggle value={displayCurrency} />
             {userEmail ? (
               <span className="hidden text-sm text-muted-foreground md:inline">
                 {userEmail}

@@ -6,8 +6,7 @@ const protectedPrefixes = [
   "/dashboard",
   "/transactions",
   "/accounts",
-  "/categories",
-  "/budget",
+  "/settings",
 ];
 
 export default auth((req) => {
@@ -26,5 +25,12 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/transactions/:path*", "/accounts/:path*", "/categories/:path*", "/budget/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/transactions/:path*",
+    "/accounts/:path*",
+    "/settings/:path*",
+    "/categories/:path*",
+    "/budget/:path*",
+  ],
 };

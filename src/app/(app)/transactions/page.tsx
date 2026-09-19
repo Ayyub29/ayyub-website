@@ -1,5 +1,5 @@
 import { getDb } from "@/db";
-import { formatMoney } from "@/lib/format";
+import { getDisplayMoney } from "@/lib/currency/server-display";
 import { DeleteTransactionButton } from "@/components/delete-transaction-button";
 import { TransactionForm } from "@/components/transaction-form";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,11 @@ export default async function TransactionsPage() {
   let categories: Array<{ id: string; name: string; kind: "income" | "expense" }> =
     [];
   let rows;
+  let money;
 
   try {
     const db = getDb();
+    money = await getDisplayMoney();
     [categories, rows] = await Promise.all([
       db.query.categories.findMany({
         columns: { id: true, name: true, kind: true },
@@ -45,15 +47,18 @@ export default async function TransactionsPage() {
   } catch {
     categories = [];
     rows = [] as NonNullable<typeof rows>;
+    money = null;
   }
+
+  const displayCurrency = money?.displayCurrency ?? "IDR";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
         <p className="text-sm text-muted-foreground">
-          Log daily spending and income — name, value, currency, date, and
-          category.
+          Log daily spending and income. List shows amounts converted to{" "}
+          {displayCurrency} (toggle in the header).
         </p>
       </div>
 
@@ -61,14 +66,14 @@ export default async function TransactionsPage() {
         <CardHeader>
           <CardTitle>Add transaction</CardTitle>
           <CardDescription>
-            Values are stored as positive amounts; category type drives income vs
-            expense in summaries.
+            Store the original currency per row; summaries use Google Finance
+            rates for conversion.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {categories.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Create at least one category before adding transactions.
+              Create categories in Settings → Categories first.
             </p>
           ) : (
             <TransactionForm categories={categories} defaultDate={today} />
@@ -88,14 +93,15 @@ export default async function TransactionsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Value</TableHead>
+                <TableHead className="text-right">{displayCurrency}</TableHead>
+                <TableHead className="text-right">Original</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground">
+                  <TableCell colSpan={6} className="text-muted-foreground">
                     No transactions yet.
                   </TableCell>
                 </TableRow>
@@ -114,7 +120,10 @@ export default async function TransactionsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatMoney(tx.amount, tx.currency)}
+                      {money?.formatConverted(tx.amount, tx.currency) ?? tx.amount}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {tx.amount} {tx.currency}
                     </TableCell>
                     <TableCell>
                       <DeleteTransactionButton id={tx.id} />
