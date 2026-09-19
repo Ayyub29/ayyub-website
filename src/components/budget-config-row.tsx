@@ -50,6 +50,7 @@ export function BudgetConfigRow({
         <div className="flex-1 space-y-1">
           <label className="text-xs text-muted-foreground">Default / month</label>
           <Input
+            key={`default-${categoryId}-${defaultBudget ?? ""}`}
             name="defaultMonthlyBudget"
             type="number"
             min="0"
@@ -75,6 +76,7 @@ export function BudgetConfigRow({
             Override this month
           </label>
           <Input
+            key={`month-${categoryId}-${year}-${month}-${monthBudget ?? defaultBudget ?? ""}`}
             name="plannedAmount"
             type="number"
             min="0"

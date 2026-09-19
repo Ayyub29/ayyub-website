@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { createTransaction, type ActionResult } from "@/app/(app)/money/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_CURRENCY, SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import {
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+} from "@/lib/currencies";
 import { cn } from "@/lib/utils";
 
 type CategoryOption = {
@@ -22,10 +26,21 @@ type TransactionFormProps = {
 
 const initialState: ActionResult | null = null;
 
+function emptyForm(defaultDate: string) {
+  return {
+    name: "",
+    amount: "",
+    currency: DEFAULT_CURRENCY,
+    transactionDate: defaultDate,
+    categoryId: "",
+  };
+}
+
 export function TransactionForm({
   categories,
   defaultDate,
 }: TransactionFormProps) {
+  const [fields, setFields] = useState(() => emptyForm(defaultDate));
   const [state, formAction, pending] = useActionState(
     createTransaction,
     initialState,
@@ -33,19 +48,22 @@ export function TransactionForm({
 
   useEffect(() => {
     if (state?.ok) {
-      const form = document.getElementById("transaction-form") as HTMLFormElement;
-      form?.reset();
+      setFields(emptyForm(defaultDate));
     }
-  }, [state]);
+  }, [state, defaultDate]);
 
   return (
-    <form id="transaction-form" action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="name">Name</Label>
           <Input
             id="name"
             name="name"
+            value={fields.name}
+            onChange={(event) =>
+              setFields((prev) => ({ ...prev, name: event.target.value }))
+            }
             placeholder="Coffee, salary, rent..."
             required
           />
@@ -58,6 +76,10 @@ export function TransactionForm({
             type="number"
             min="0.01"
             step="0.01"
+            value={fields.amount}
+            onChange={(event) =>
+              setFields((prev) => ({ ...prev, amount: event.target.value }))
+            }
             placeholder="0.00"
             required
           />
@@ -67,7 +89,13 @@ export function TransactionForm({
           <select
             id="currency"
             name="currency"
-            defaultValue={DEFAULT_CURRENCY}
+            value={fields.currency}
+            onChange={(event) =>
+              setFields((prev) => ({
+                ...prev,
+                currency: event.target.value as SupportedCurrency,
+              }))
+            }
             className={cn(
               "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
             )}
@@ -85,7 +113,13 @@ export function TransactionForm({
             id="transactionDate"
             name="transactionDate"
             type="date"
-            defaultValue={defaultDate}
+            value={fields.transactionDate}
+            onChange={(event) =>
+              setFields((prev) => ({
+                ...prev,
+                transactionDate: event.target.value,
+              }))
+            }
             required
           />
         </div>
@@ -95,7 +129,10 @@ export function TransactionForm({
             id="categoryId"
             name="categoryId"
             required
-            defaultValue=""
+            value={fields.categoryId}
+            onChange={(event) =>
+              setFields((prev) => ({ ...prev, categoryId: event.target.value }))
+            }
             className={cn(
               "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
             )}
@@ -119,7 +156,7 @@ export function TransactionForm({
         <p className="text-sm text-muted-foreground">Transaction saved.</p>
       ) : null}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !fields.categoryId}>
         {pending ? "Saving..." : "Add transaction"}
       </Button>
     </form>
