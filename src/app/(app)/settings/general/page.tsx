@@ -33,7 +33,7 @@ export default async function SettingsGeneralPage() {
           <CardDescription>
             All summaries, budgets, and converted amounts use this currency.
             Transaction values are still stored in the currency you enter; we
-            convert them using live Google Finance rates.
+            convert them using live exchange rates (USD, IDR, THB).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -42,9 +42,9 @@ export default async function SettingsGeneralPage() {
               <CurrencyToggle value={money.displayCurrency} />
               <p className="text-xs text-muted-foreground">
                 Rates source:{" "}
-                {money.rateSource === "google"
-                  ? "Google Finance"
-                  : "Fallback (Google unavailable)"}{" "}
+                {money.rateSource === "live"
+                  ? "ExchangeRate API"
+                  : "Fallback estimates (live rates unavailable)"}{" "}
                 · Updated {money.ratesUpdatedAt.toLocaleString()}
               </p>
               <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">

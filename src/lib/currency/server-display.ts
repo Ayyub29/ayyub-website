@@ -11,7 +11,7 @@ import {
 export type DisplayMoney = {
   displayCurrency: SupportedCurrency;
   rates: ExchangeRateMatrix;
-  rateSource: "google" | "fallback";
+  rateSource: "live" | "fallback";
   ratesUpdatedAt: Date;
   convert: (amount: string | number, fromCurrency: string) => number;
   format: (amount: string | number, fromCurrency?: string) => string;

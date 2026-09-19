@@ -95,7 +95,7 @@ export default async function SettingsBudgetPage({
         <h2 className="text-xl font-semibold tracking-tight">Budget</h2>
         <p className="text-sm text-muted-foreground">
           Budgets convert to your display currency ({displayCurrency}) using
-          Google Finance rates. Saving stores the amount in {displayCurrency}.
+          live exchange rates. Saving stores the amount in {displayCurrency}.
         </p>
       </div>
 

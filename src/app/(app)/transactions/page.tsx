@@ -66,7 +66,7 @@ export default async function TransactionsPage() {
         <CardHeader>
           <CardTitle>Add transaction</CardTitle>
           <CardDescription>
-            Store the original currency per row; summaries use Google Finance
+            Store the original currency per row; summaries use live exchange
             rates for conversion.
           </CardDescription>
         </CardHeader>
