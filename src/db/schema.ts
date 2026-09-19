@@ -92,6 +92,31 @@ export const portfolioApplications = pgTable("portfolio_applications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/** User-entered annual dividend/coupon for non-stock holdings (P2P, obligasi, crypto). */
+export const portfolioDividendManual = pgTable(
+  "portfolio_dividend_manual",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => portfolioApplications.id, { onDelete: "cascade" }),
+    category: portfolioCategoryEnum("category").notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    annualAmount: numeric("annual_amount", { precision: 14, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).default("IDR").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("portfolio_dividend_manual_position").on(
+      table.applicationId,
+      table.category,
+      table.name,
+    ),
+  ],
+);
+
 export const portfolioTransactions = pgTable("portfolio_transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
   applicationId: uuid("application_id")
@@ -163,6 +188,17 @@ export const portfolioApplicationsRelations = relations(
   portfolioApplications,
   ({ many }) => ({
     transactions: many(portfolioTransactions),
+    dividendManual: many(portfolioDividendManual),
+  }),
+);
+
+export const portfolioDividendManualRelations = relations(
+  portfolioDividendManual,
+  ({ one }) => ({
+    application: one(portfolioApplications, {
+      fields: [portfolioDividendManual.applicationId],
+      references: [portfolioApplications.id],
+    }),
   }),
 );
 

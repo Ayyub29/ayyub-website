@@ -44,6 +44,14 @@ export const portfolioApplicationUpdateSchema =
     id: z.string().uuid(),
   });
 
+export const portfolioManualDividendSchema = z.object({
+  applicationId: z.string().uuid(),
+  category: z.enum(["p2p", "obligasi", "crypto"]),
+  name: z.string().trim().min(1).max(200),
+  annualAmount: z.coerce.number().positive("Annual amount must be greater than zero"),
+  currency: z.enum(SUPPORTED_CURRENCIES),
+});
+
 export const portfolioTransactionInputSchema = baseSchema.superRefine(
   (data, ctx) => {
     const isTrade = data.type === "buy" || data.type === "sell";

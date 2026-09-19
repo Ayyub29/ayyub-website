@@ -15,7 +15,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { HoldingValuationCells } from "@/components/holding-valuation-cells";
+import { PortfolioDividendSection } from "@/components/portfolio-dividend-section";
+import { getDb } from "@/db";
 import { PORTFOLIO_CATEGORY_LABELS } from "@/lib/portfolio/constants";
+import {
+  buildDividendProjection,
+  manualDividendHoldingOptions,
+  type ManualDividendRow,
+} from "@/lib/portfolio/dividends";
 import { loadPortfolioData } from "@/lib/portfolio/load";
 import { sumCurrentAmountDisplay } from "@/lib/portfolio/quotes";
 
@@ -54,6 +61,35 @@ export default async function PortfolioSummaryPage() {
   const formatDisplay = (amount: number) =>
     money.format(amount, displayCurrency);
 
+  let dividendProjection = null;
+  let manualRows: ManualDividendRow[] = [];
+  let dividendReady = false;
+
+  try {
+    const db = getDb();
+    const rows = await db.query.portfolioDividendManual.findMany();
+    manualRows = rows.map((row) => ({
+      applicationId: row.applicationId,
+      category: row.category,
+      name: row.name,
+      annualAmount: row.annualAmount,
+      currency: row.currency,
+    }));
+    dividendProjection = await buildDividendProjection(
+      summary,
+      manualRows,
+      displayCurrency,
+      money.rates,
+    );
+    dividendReady = true;
+  } catch {
+    dividendReady = false;
+  }
+
+  const dividendHoldingOptions = dividendReady
+    ? manualDividendHoldingOptions(summary, manualRows)
+    : [];
+
   return (
     <div className="space-y-8">
       <div>
@@ -81,6 +117,25 @@ export default async function PortfolioSummaryPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {dividendReady && dividendProjection ? (
+        <PortfolioDividendSection
+          projection={dividendProjection}
+          holdingOptions={dividendHoldingOptions}
+          manualRows={manualRows}
+          displayCurrency={displayCurrency}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dividend projection</CardTitle>
+            <CardDescription>
+              Run <code className="text-xs">npm run db:push</code> to enable
+              dividend projection and manual income entries.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

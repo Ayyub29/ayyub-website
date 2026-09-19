@@ -1,12 +1,13 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDb, schema } from "@/db";
 import {
   portfolioApplicationInputSchema,
   portfolioApplicationUpdateSchema,
+  portfolioManualDividendSchema,
   portfolioTransactionInputSchema,
 } from "@/lib/validations/portfolio";
 
@@ -198,5 +199,92 @@ export async function deletePortfolioApplication(
     .where(eq(schema.portfolioApplications.id, id));
 
   revalidatePortfolioApps();
+  return { ok: true };
+}
+
+export async function upsertPortfolioManualDividend(
+  _prev: PortfolioActionResult | null,
+  formData: FormData,
+): Promise<PortfolioActionResult> {
+  const parsed = portfolioManualDividendSchema.safeParse({
+    applicationId: formData.get("applicationId"),
+    category: formData.get("category"),
+    name: formData.get("name"),
+    annualAmount: formData.get("annualAmount"),
+    currency: formData.get("currency"),
+  });
+
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const db = getDb();
+  const { applicationId, category, name, annualAmount, currency } =
+    parsed.data;
+
+  const application = await db.query.portfolioApplications.findFirst({
+    where: eq(schema.portfolioApplications.id, applicationId),
+  });
+  if (!application) {
+    return fail("Application not found");
+  }
+
+  await db
+    .insert(schema.portfolioDividendManual)
+    .values({
+      applicationId,
+      category,
+      name: name.trim(),
+      annualAmount: annualAmount.toFixed(2),
+      currency,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        schema.portfolioDividendManual.applicationId,
+        schema.portfolioDividendManual.category,
+        schema.portfolioDividendManual.name,
+      ],
+      set: {
+        annualAmount: annualAmount.toFixed(2),
+        currency,
+        updatedAt: new Date(),
+      },
+    });
+
+  revalidatePath("/portfolio");
+  return { ok: true };
+}
+
+export async function deletePortfolioManualDividend(
+  _prev: PortfolioActionResult | null,
+  formData: FormData,
+): Promise<PortfolioActionResult> {
+  const applicationId = formData.get("applicationId");
+  const category = formData.get("category");
+  const name = formData.get("name");
+
+  if (
+    typeof applicationId !== "string" ||
+    typeof category !== "string" ||
+    typeof name !== "string" ||
+    !applicationId ||
+    !name
+  ) {
+    return fail("Missing position");
+  }
+
+  const db = getDb();
+  await db
+    .delete(schema.portfolioDividendManual)
+    .where(
+      and(
+        eq(schema.portfolioDividendManual.applicationId, applicationId),
+        eq(schema.portfolioDividendManual.category, category as "p2p" | "obligasi" | "crypto"),
+        eq(schema.portfolioDividendManual.name, name),
+      ),
+    );
+
+  revalidatePath("/portfolio");
   return { ok: true };
 }
