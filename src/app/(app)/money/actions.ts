@@ -1,12 +1,13 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDb, schema } from "@/db";
 import {
   categoryBudgetDefaultSchema,
   categoryInputSchema,
+  categoryUpdateSchema,
   transactionInputSchema,
 } from "@/lib/validations/money";
 
@@ -90,7 +91,7 @@ export async function createCategory(
     name: formData.get("name"),
     kind: formData.get("kind"),
     color: formData.get("color") || undefined,
-    defaultMonthlyBudget: formData.get("defaultMonthlyBudget") || undefined,
+    defaultMonthlyBudget: formData.get("defaultMonthlyBudget"),
   });
 
   if (!parsed.success) {
@@ -111,6 +112,75 @@ export async function createCategory(
   revalidatePath("/categories");
   revalidatePath("/transactions");
   revalidatePath("/budget");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function updateCategory(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = categoryUpdateSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    kind: formData.get("kind"),
+    color: formData.get("color") || undefined,
+    defaultMonthlyBudget: formData.get("defaultMonthlyBudget"),
+  });
+
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const db = getDb();
+  const { id, name, kind, color, defaultMonthlyBudget } = parsed.data;
+
+  await db
+    .update(schema.categories)
+    .set({
+      name,
+      kind,
+      color: color ?? "#64748b",
+      defaultMonthlyBudget:
+        kind === "expense" && defaultMonthlyBudget != null
+          ? defaultMonthlyBudget.toFixed(2)
+          : null,
+    })
+    .where(eq(schema.categories.id, id));
+
+  revalidatePath("/categories");
+  revalidatePath("/transactions");
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deleteCategory(
+  formData: FormData,
+): Promise<ActionResult> {
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) {
+    return fail("Missing category id");
+  }
+
+  const db = getDb();
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.transactions)
+    .where(eq(schema.transactions.categoryId, id));
+
+  if (Number(count) > 0) {
+    return fail(
+      `Cannot delete: ${count} transaction(s) use this category. Reassign or delete them first.`,
+    );
+  }
+
+  await db.delete(schema.categories).where(eq(schema.categories.id, id));
+
+  revalidatePath("/categories");
+  revalidatePath("/transactions");
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 

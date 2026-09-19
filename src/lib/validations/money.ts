@@ -11,10 +11,20 @@ export const transactionInputSchema = z.object({
 });
 
 export const categoryInputSchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1, "Name is required").max(120),
   kind: z.enum(["income", "expense"]),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  defaultMonthlyBudget: z.coerce.number().min(0).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color")
+    .optional(),
+  defaultMonthlyBudget: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().min(0).optional(),
+  ),
+});
+
+export const categoryUpdateSchema = categoryInputSchema.extend({
+  id: z.string().uuid(),
 });
 
 export const categoryBudgetDefaultSchema = z.object({

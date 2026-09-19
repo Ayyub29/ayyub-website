@@ -1,6 +1,8 @@
 import { getDb } from "@/db";
-import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
 import { formatMoney } from "@/lib/format";
+import { CategoryCreateForm } from "@/components/category-create-form";
+import { CategoryEditSheet } from "@/components/category-edit-sheet";
+import { DeleteCategoryButton } from "@/components/delete-category-button";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -46,29 +48,40 @@ export default async function CategoriesPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
         <p className="text-sm text-muted-foreground">
-          Fixed list for personal money management. Sync from code with{" "}
-          <code className="text-xs">npm run db:seed:categories</code>.
+          Create, edit, or remove categories used for transactions and budgets.
+          Optional: run{" "}
+          <code className="text-xs">npm run db:seed:categories</code> to load
+          the default starter list.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Expected categories</CardTitle>
+          <CardTitle>Add category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CategoryCreateForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All categories</CardTitle>
           <CardDescription>
-            {DEFAULT_CATEGORIES.length} total — 2 income, 13 expense (expense
-            includes a separate &quot;Others&quot; from income Others).
+            {categories.length} total ({income.length} income, {expense.length}{" "}
+            expense)
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <CategorySection title="Income" rows={income} />
-          <CategorySection title="Expense" rows={expense} />
+        <CardContent className="space-y-8">
+          <CategoryTable title="Income" rows={income} />
+          <CategoryTable title="Expense" rows={expense} />
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function CategorySection({
+function CategoryTable({
   title,
   rows,
 }: {
@@ -77,6 +90,7 @@ function CategorySection({
     id: string;
     name: string;
     kind: "income" | "expense";
+    color: string | null;
     defaultMonthlyBudget: string | null;
   }>;
 }) {
@@ -88,21 +102,29 @@ function CategorySection({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead className="text-right">Default budget</TableHead>
+            <TableHead className="text-right">Monthly budget</TableHead>
+            <TableHead className="w-[140px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="text-muted-foreground">
-                None in database — run{" "}
-                <code className="text-xs">npm run db:seed:categories</code>.
+              <TableCell colSpan={4} className="text-muted-foreground">
+                No {title.toLowerCase()} categories yet.
               </TableCell>
             </TableRow>
           ) : (
             rows.map((category) => (
               <TableRow key={category.id}>
-                <TableCell className="font-medium">{category.name}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-2 font-medium">
+                    <span
+                      className="size-3 rounded-full border"
+                      style={{ backgroundColor: category.color ?? "#64748b" }}
+                    />
+                    {category.name}
+                  </span>
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{category.kind}</Badge>
                 </TableCell>
@@ -110,6 +132,12 @@ function CategorySection({
                   {category.kind === "expense" && category.defaultMonthlyBudget
                     ? formatMoney(category.defaultMonthlyBudget, "IDR")
                     : "—"}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <CategoryEditSheet category={category} />
+                    <DeleteCategoryButton id={category.id} name={category.name} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))
