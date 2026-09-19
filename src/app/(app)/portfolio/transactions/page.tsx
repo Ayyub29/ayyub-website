@@ -1,4 +1,5 @@
 import { DeletePortfolioTransactionButton } from "@/components/delete-portfolio-transaction-button";
+import { PortfolioTransactionEditSheet } from "@/components/portfolio-transaction-edit-sheet";
 import { PortfolioTransactionForm } from "@/components/portfolio-transaction-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -150,7 +151,27 @@ export default async function PortfolioTransactionsPage() {
                       {tx.description ?? "—"}
                     </TableCell>
                     <TableCell>
-                      <DeletePortfolioTransactionButton id={tx.id} />
+                      <div className="flex justify-end gap-1">
+                        <PortfolioTransactionEditSheet
+                          applications={applications.map((a) => ({
+                            id: a.id,
+                            name: a.name,
+                          }))}
+                          transaction={{
+                            id: tx.id,
+                            type: tx.type,
+                            applicationId: tx.applicationId,
+                            name: tx.name,
+                            value: tx.value,
+                            transactionAmount: tx.transactionAmount,
+                            currency: tx.currency,
+                            category: tx.category,
+                            description: tx.description,
+                            transactionDate: tx.transactionDate,
+                          }}
+                        />
+                        <DeletePortfolioTransactionButton id={tx.id} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

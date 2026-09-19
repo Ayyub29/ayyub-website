@@ -11,6 +11,7 @@ import {
   categoryUpdateSchema,
   monthlyAccountBalanceSchema,
   transactionInputSchema,
+  transactionUpdateSchema,
 } from "@/lib/validations/money";
 
 export type ActionResult =
@@ -58,6 +59,54 @@ export async function createTransaction(
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/budget");
+  return { ok: true };
+}
+
+export async function updateTransaction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = transactionUpdateSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    amount: formData.get("amount"),
+    currency: formData.get("currency"),
+    transactionDate: formData.get("transactionDate"),
+    categoryId: formData.get("categoryId"),
+  });
+
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const db = getDb();
+  const category = await db.query.categories.findFirst({
+    where: eq(schema.categories.id, parsed.data.categoryId),
+  });
+
+  if (!category) {
+    return fail("Category not found");
+  }
+
+  const { id, ...data } = parsed.data;
+
+  await db
+    .update(schema.transactions)
+    .set({
+      name: data.name,
+      amount: data.amount.toFixed(2),
+      currency: data.currency,
+      transactionDate: data.transactionDate,
+      categoryId: data.categoryId,
+      description: data.name,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.transactions.id, id));
+
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+  revalidatePath("/statement");
   return { ok: true };
 }
 

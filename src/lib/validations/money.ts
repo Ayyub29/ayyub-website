@@ -10,6 +10,10 @@ export const transactionInputSchema = z.object({
   categoryId: z.string().uuid("Pick a category"),
 });
 
+export const transactionUpdateSchema = transactionInputSchema.extend({
+  id: z.string().uuid(),
+});
+
 export const categoryInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   kind: z.enum(["income", "expense"]),

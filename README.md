@@ -121,9 +121,60 @@ Restart **Cursor** → **Settings → MCP** → ensure `google-mcp` is enabled a
 
 Do not commit `.google-sheet-mcp.json` or credential JSON files (they are gitignored).
 
+## Import cashflow CSV (local)
+
+For the Evaluation Center–style export (columns: Expense, Category, Value in THB, Month, optional **IDR in column F**):
+
+1. Add to `.env.local`:
+
+   ```env
+   IMPORT_SECRET="some-long-random-string"
+   ```
+
+2. Start the app: `npm run dev`
+
+3. Dry run (validates rows, no DB writes):
+
+   ```bash
+   IMPORT_SECRET=your-secret DRY_RUN=1 npm run import:cashflow -- path/to/file.csv
+   ```
+
+4. Import:
+
+   ```bash
+   IMPORT_SECRET=your-secret npm run import:cashflow -- path/to/file.csv
+   ```
+
+Rules:
+
+- If **column F (IDR)** is filled → amount stored as **IDR**.
+- Otherwise **column D** is stored as **THB** (European decimals like `445,5`).
+- Month labels like `August 2025` or `Agustus 2026` → transaction date **1st of that month**.
+- Unknown expense categories (e.g. `Gym`) are **created automatically**.
+- Endpoint: `POST /api/import/cashflow` with header `x-import-secret` (disabled in production unless `ALLOW_LOCAL_IMPORT=true`).
+
+### Import investment log CSV (local)
+
+Columns: Date, Name, Transaction Type, Currency, Lot Amount, **Transaction Value**, …, Category, **Platform**, Details.
+
+```bash
+IMPORT_SECRET=your-secret DRY_RUN=1 npm run import:investment-log -- path/to/investment-log.csv
+IMPORT_SECRET=your-secret npm run import:investment-log -- path/to/investment-log.csv
+```
+
+Mapping:
+
+- **Deposit** / **Return** (dividends, bond coupons) → portfolio `deposit` (idle cash).
+- **Cash Out** → `draw`.
+- **Buy** / **Sell** → trades with lots from **Lot Amount** and amount from **Transaction Value** in **Currency**.
+- Category: Stocks → `stock`, P2P → `p2p`, Bond(s) → `obligasi`, Bitcoin → `crypto`.
+- Unknown platforms (e.g. **Binance**) are created automatically.
+
+Endpoint: `POST /api/import/investment-log` with header `x-import-secret`.
+
 ## Next steps
 
-- Import CSV from your Google Sheet
+- Import CSV from your Google Sheet (or use `import:cashflow` above)
 - Add transaction create/edit forms
 - Charts on the dashboard (Recharts)
 - Match category names to your spreadsheet tabs
