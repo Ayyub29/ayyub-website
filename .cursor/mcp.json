@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "google-mcp": {
+      "command": "npx",
+      "args": ["-y", "google-mcp"],
+      "env": {
+        "GOOGLE_SPREADSHEET_ID": "1CaqA6vOHV3gKwR9gitbYj6l-fZAcB9ue4s5PvgtAWBQ"
+      }
+    }
+  }
+}

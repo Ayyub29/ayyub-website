@@ -89,6 +89,37 @@ Open [http://localhost:3000](http://localhost:3000) → sign in → **Dashboard*
 3. Set production Google redirect URI: `https://YOUR_DOMAIN/api/auth/callback/google`
 4. Set `AUTH_URL` to your production URL.
 
+## Google Sheets MCP (Cursor)
+
+This repo includes [google-mcp](https://github.com/we2go/google-mcp) so Cursor can read your budget spreadsheet.
+
+**Already in the repo**
+
+- `.cursor/mcp.json` — MCP server + your spreadsheet ID
+- `.google-sheet-mcp.json.example` — local config template
+
+**One-time setup (you must do this — OAuth opens in your browser)**
+
+```bash
+cp .google-sheet-mcp.json.example .google-sheet-mcp.json
+npm run google-mcp:init
+```
+
+Use OAuth (`--auth oauth` is the default in the script above). When prompted, paste your sheet URL or confirm spreadsheet ID `1CaqA6vOHV3gKwR9gitbYj6l-fZAcB9ue4s5PvgtAWBQ`.
+
+Then:
+
+```bash
+npm run google-mcp:test
+npm run google-mcp:list
+```
+
+Restart **Cursor** → **Settings → MCP** → ensure `google-mcp` is enabled and authenticated.
+
+**Service account instead of OAuth:** run `npx google-mcp init` (no `--auth oauth`), download JSON from Google Cloud, save as `google-credentials.json`, share the sheet with the service account email as Editor.
+
+Do not commit `.google-sheet-mcp.json` or credential JSON files (they are gitignored).
+
 ## Next steps
 
 - Import CSV from your Google Sheet
