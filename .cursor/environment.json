@@ -1,0 +1,11 @@
+{
+  "name": "ayyub-finance",
+  "install": "npm install",
+  "start": "npm run dev",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev"
+    }
+  ]
+}
