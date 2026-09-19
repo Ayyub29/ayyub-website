@@ -127,7 +127,7 @@ export async function getMonthlySummary(
       categoryName: row.categoryName,
       kind: row.kind,
       color: row.color,
-      currency: row.sampleCurrency ?? "USD",
+      currency: row.sampleCurrency ?? "IDR",
       planned,
       actual,
       variance,

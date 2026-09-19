@@ -6,7 +6,7 @@ import { createTransaction, type ActionResult } from "@/app/(app)/money/actions"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import { DEFAULT_CURRENCY, SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { cn } from "@/lib/utils";
 
 type CategoryOption = {
@@ -67,7 +67,7 @@ export function TransactionForm({
           <select
             id="currency"
             name="currency"
-            defaultValue="USD"
+            defaultValue={DEFAULT_CURRENCY}
             className={cn(
               "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
             )}

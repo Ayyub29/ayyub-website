@@ -1,21 +1,18 @@
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
+const DEFAULT_FORMAT_CURRENCY = "IDR";
 
-export function formatMoney(value: string | number, currency = "USD") {
-  const amount = typeof value === "string" ? Number(value) : value;
-  if (Number.isNaN(amount)) {
-    return currencyFormatter.format(0);
-  }
+export function formatMoney(
+  value: string | number,
+  currency: string = DEFAULT_FORMAT_CURRENCY,
+) {
+  const parsed = typeof value === "string" ? Number(value) : value;
+  const amount = Number.isNaN(parsed) ? 0 : parsed;
 
-  if (currency === "USD") {
-    return currencyFormatter.format(amount);
-  }
+  const code = currency.length === 3 ? currency : DEFAULT_FORMAT_CURRENCY;
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency,
+    currency: code,
+    ...(code === "IDR" ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}),
   }).format(amount);
 }
 

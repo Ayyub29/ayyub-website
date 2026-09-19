@@ -27,7 +27,7 @@ export const accounts = pgTable("accounts", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
   type: accountTypeEnum("type").default("checking").notNull(),
-  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  currency: varchar("currency", { length: 3 }).default("IDR").notNull(),
   initialBalance: numeric("initial_balance", { precision: 14, scale: 2 })
     .default("0")
     .notNull(),
@@ -59,7 +59,7 @@ export const transactions = pgTable("transactions", {
     .references(() => categories.id, { onDelete: "restrict" }),
   name: varchar("name", { length: 200 }).notNull(),
   amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
-  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  currency: varchar("currency", { length: 3 }).default("IDR").notNull(),
   description: text("description"),
   transactionDate: date("transaction_date").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
