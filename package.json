@@ -13,6 +13,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:seed:categories": "tsx scripts/seed-categories.ts",
     "db:seed:portfolio": "tsx scripts/seed-portfolio-apps.ts",
+    "import:cashflow": "tsx scripts/import-cashflow-csv.ts",
     "google-mcp:init": "npx google-mcp init --auth oauth",
     "google-mcp:test": "npx google-mcp test",
     "google-mcp:list": "npx google-mcp list"
