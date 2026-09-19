@@ -1,4 +1,6 @@
 import { getDb } from "@/db";
+import { formatMoney } from "@/lib/format";
+import { CategoryForm } from "@/components/category-form";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -41,22 +43,32 @@ export default async function CategoriesPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
         <p className="text-sm text-muted-foreground">
-          Income and expense labels for budgeting and reports.
+          Labels for transactions. Expense categories can have a default monthly
+          budget.
         </p>
       </div>
 
       <Card>
         <CardHeader>
+          <CardTitle>Add category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CategoryForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Category list</CardTitle>
-          <CardDescription>Map these to your spreadsheet columns.</CardDescription>
+          <CardDescription>Used when logging transactions.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead>Color</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Default budget</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -73,17 +85,10 @@ export default async function CategoriesPage() {
                     <TableCell>
                       <Badge variant="secondary">{category.kind}</Badge>
                     </TableCell>
-                    <TableCell>
-                      <span
-                        className="inline-flex items-center gap-2"
-                        style={{ color: category.color ?? undefined }}
-                      >
-                        <span
-                          className="size-3 rounded-full border"
-                          style={{ backgroundColor: category.color ?? "#64748b" }}
-                        />
-                        {category.color}
-                      </span>
+                    <TableCell className="text-right">
+                      {category.kind === "expense" && category.defaultMonthlyBudget
+                        ? formatMoney(category.defaultMonthlyBudget)
+                        : "—"}
                     </TableCell>
                   </TableRow>
                 ))

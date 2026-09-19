@@ -8,39 +8,45 @@ import { getDb, schema } from "../src/db";
 async function main() {
   const db = getDb();
 
-  const existing = await db.query.accounts.findFirst();
+  const existing = await db.query.categories.findFirst();
   if (existing) {
-    console.log("Seed skipped: accounts already exist.");
+    console.log("Seed skipped: categories already exist.");
     return;
   }
-
-  const [checking, savings] = await db
-    .insert(schema.accounts)
-    .values([
-      {
-        name: "Main checking",
-        type: "checking",
-        currency: "USD",
-        initialBalance: "2500.00",
-      },
-      {
-        name: "Emergency savings",
-        type: "savings",
-        currency: "USD",
-        initialBalance: "8000.00",
-      },
-    ])
-    .returning();
 
   const categories = await db
     .insert(schema.categories)
     .values([
       { name: "Salary", kind: "income", color: "#16a34a", sortOrder: 1 },
       { name: "Freelance", kind: "income", color: "#059669", sortOrder: 2 },
-      { name: "Rent", kind: "expense", color: "#dc2626", sortOrder: 10 },
-      { name: "Groceries", kind: "expense", color: "#ea580c", sortOrder: 11 },
-      { name: "Transport", kind: "expense", color: "#2563eb", sortOrder: 12 },
-      { name: "Dining", kind: "expense", color: "#9333ea", sortOrder: 13 },
+      {
+        name: "Rent",
+        kind: "expense",
+        color: "#dc2626",
+        sortOrder: 10,
+        defaultMonthlyBudget: "1200.00",
+      },
+      {
+        name: "Groceries",
+        kind: "expense",
+        color: "#ea580c",
+        sortOrder: 11,
+        defaultMonthlyBudget: "400.00",
+      },
+      {
+        name: "Transport",
+        kind: "expense",
+        color: "#2563eb",
+        sortOrder: 12,
+        defaultMonthlyBudget: "150.00",
+      },
+      {
+        name: "Dining",
+        kind: "expense",
+        color: "#9333ea",
+        sortOrder: 13,
+        defaultMonthlyBudget: "200.00",
+      },
     ])
     .returning();
 
@@ -64,44 +70,40 @@ async function main() {
 
   await db.insert(schema.transactions).values([
     {
-      accountId: checking.id,
       categoryId: salary.id,
+      name: "Monthly salary",
       amount: "4200.00",
+      currency: "USD",
       description: "Monthly salary",
       transactionDate: `${year}-${monthStr}-01`,
     },
     {
-      accountId: checking.id,
       categoryId: rent.id,
-      amount: "-1200.00",
+      name: "Apartment rent",
+      amount: "1200.00",
+      currency: "USD",
       description: "Apartment rent",
       transactionDate: `${year}-${monthStr}-03`,
     },
     {
-      accountId: checking.id,
       categoryId: groceries.id,
-      amount: "-86.42",
+      name: "Weekly groceries",
+      amount: "86.42",
+      currency: "USD",
       description: "Weekly groceries",
       transactionDate: today,
     },
     {
-      accountId: checking.id,
       categoryId: transport.id,
-      amount: "-42.00",
+      name: "Transit pass",
+      amount: "42.00",
+      currency: "USD",
       description: "Transit pass",
-      transactionDate: today,
-    },
-    {
-      accountId: savings.id,
-      categoryId: salary.id,
-      amount: "500.00",
-      description: "Transfer to savings",
       transactionDate: today,
     },
   ]);
 
   console.log("Seed complete.");
-  console.log(`Accounts: ${checking.name}, ${savings.name}`);
   console.log(`Categories: ${categories.length}`);
 }
 

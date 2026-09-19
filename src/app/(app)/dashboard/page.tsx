@@ -1,8 +1,7 @@
-import { desc, eq, sql } from "drizzle-orm";
-
-import { getDb, schema } from "@/db";
+import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
 import { formatMoney, formatMonthYear } from "@/lib/format";
-import { getDashboardSummary } from "@/lib/dashboard";
+import { BudgetStatusBadge } from "@/components/budget-status-badge";
+import { MonthNav } from "@/components/month-nav";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -22,12 +21,19 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams: Promise<{ year?: string; month?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const params = await searchParams;
+  const { year, month } = parseYearMonth(params.year, params.month);
+
   let summary;
   let setupRequired = false;
 
   try {
-    summary = await getDashboardSummary();
+    summary = await getMonthlySummary(year, month);
   } catch {
     setupRequired = true;
   }
@@ -35,15 +41,14 @@ export default async function DashboardPage() {
   if (setupRequired || !summary) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
         <Card>
           <CardHeader>
             <CardTitle>Connect your database</CardTitle>
             <CardDescription>
-              Add <code className="text-xs">DATABASE_URL</code> to{" "}
-              <code className="text-xs">.env.local</code>, then run{" "}
-              <code className="text-xs">npm run db:push</code> and{" "}
-              <code className="text-xs">npm run db:seed</code>.
+              Set <code className="text-xs">DATABASE_URL</code>, run{" "}
+              <code className="text-xs">npm run db:push</code>, then add categories
+              and transactions.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -51,39 +56,28 @@ export default async function DashboardPage() {
     );
   }
 
-  const db = getDb();
-  const categoryBreakdown = await db
-    .select({
-      categoryName: schema.categories.name,
-      kind: schema.categories.kind,
-      total: sql<string>`coalesce(sum(${schema.transactions.amount}), 0)`,
-    })
-    .from(schema.transactions)
-    .innerJoin(
-      schema.categories,
-      eq(schema.transactions.categoryId, schema.categories.id),
-    )
-    .where(
-      sql`extract(year from ${schema.transactions.transactionDate}) = ${summary.year}
-          and extract(month from ${schema.transactions.transactionDate}) = ${summary.month}`,
-    )
-    .groupBy(schema.categories.name, schema.categories.kind)
-    .orderBy(desc(sql`sum(${schema.transactions.amount})`));
+  const expenseRows = summary.byCategory.filter((row) => row.kind === "expense");
+  const incomeRows = summary.byCategory.filter((row) => row.kind === "income");
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          {formatMonthYear(summary.year, summary.month)}
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Monthly summary</h1>
+          <p className="text-sm text-muted-foreground">
+            Personal money management for {formatMonthYear(year, month)}.
+          </p>
+        </div>
+        <MonthNav year={year} month={month} basePath="/dashboard" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Income</CardDescription>
-            <CardTitle className="text-2xl">{formatMoney(summary.income)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {formatMoney(summary.income)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -100,48 +94,45 @@ export default async function DashboardPage() {
             <CardTitle className="text-2xl">{formatMoney(summary.net)}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Setup</CardDescription>
-            <CardTitle className="text-2xl">
-              {summary.accountCount} acct · {summary.categoryCount} cat
-            </CardTitle>
-          </CardHeader>
-        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>By category</CardTitle>
-            <CardDescription>This month</CardDescription>
+            <CardTitle>Budget vs actual</CardTitle>
+            <CardDescription>
+              Expense categories — configure budgets on the Budget page.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Budget</TableHead>
+                  <TableHead className="text-right">Spent</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categoryBreakdown.length === 0 ? (
+                {expenseRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
-                      No transactions yet. Run the seed script or add data from
-                      Transactions.
+                    <TableCell colSpan={4} className="text-muted-foreground">
+                      No expense categories yet.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  categoryBreakdown.map((row) => (
-                    <TableRow key={`${row.categoryName}-${row.kind}`}>
+                  expenseRows.map((row) => (
+                    <TableRow key={row.categoryId}>
                       <TableCell>{row.categoryName}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{row.kind}</Badge>
+                      <TableCell className="text-right">
+                        {formatMoney(row.planned, row.currency)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatMoney(row.total)}
+                        {formatMoney(row.actual, row.currency)}
+                      </TableCell>
+                      <TableCell>
+                        <BudgetStatusBadge status={row.status} />
                       </TableCell>
                     </TableRow>
                   ))
@@ -153,42 +144,85 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent transactions</CardTitle>
+            <CardTitle>Income by category</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentTransactions.length === 0 ? (
+                {incomeRows.every((row) => row.actual === 0) ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
-                      No transactions yet.
+                    <TableCell colSpan={2} className="text-muted-foreground">
+                      No income recorded this month.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  summary.recentTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>{tx.transactionDate}</TableCell>
-                      <TableCell>
-                        {tx.description ?? tx.category?.name ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(tx.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  incomeRows
+                    .filter((row) => row.actual > 0)
+                    .map((row) => (
+                      <TableRow key={row.categoryId}>
+                        <TableCell>{row.categoryName}</TableCell>
+                        <TableCell className="text-right">
+                          {formatMoney(row.actual, row.currency)}
+                        </TableCell>
+                      </TableRow>
+                    ))
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transactions this month</CardTitle>
+          <CardDescription>{summary.transactions.length} entries</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {summary.transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted-foreground">
+                    No transactions yet. Add one from the Transactions page.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                summary.transactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell>{tx.transactionDate}</TableCell>
+                    <TableCell>{tx.name}</TableCell>
+                    <TableCell>
+                      {tx.category ? (
+                        <Badge variant="secondary">{tx.category.name}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(tx.amount, tx.currency)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

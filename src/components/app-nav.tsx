@@ -6,11 +6,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Monthly summary" },
   { href: "/transactions", label: "Transactions" },
-  { href: "/accounts", label: "Accounts" },
-  { href: "/categories", label: "Categories" },
   { href: "/budget", label: "Budget" },
+  { href: "/categories", label: "Categories" },
 ] as const;
 
 export function AppNav() {
