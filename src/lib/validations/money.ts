@@ -17,13 +17,6 @@ export const categoryInputSchema = z.object({
   defaultMonthlyBudget: z.coerce.number().min(0).optional(),
 });
 
-export const monthlyBudgetInputSchema = z.object({
-  categoryId: z.string().uuid(),
-  year: z.coerce.number().int().min(2000).max(2100),
-  month: z.coerce.number().int().min(1).max(12),
-  plannedAmount: z.coerce.number().min(0),
-});
-
 export const categoryBudgetDefaultSchema = z.object({
   categoryId: z.string().uuid(),
   defaultMonthlyBudget: z.coerce.number().min(0),

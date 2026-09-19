@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <CardHeader>
             <CardTitle>Budget vs actual</CardTitle>
             <CardDescription>
-              Expense categories — configure budgets on the Budget page.
+              Expense categories — monthly limits on the Budget page.
             </CardDescription>
           </CardHeader>
           <CardContent>

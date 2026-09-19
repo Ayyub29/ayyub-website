@@ -7,7 +7,6 @@ import { getDb, schema } from "@/db";
 import {
   categoryBudgetDefaultSchema,
   categoryInputSchema,
-  monthlyBudgetInputSchema,
   transactionInputSchema,
 } from "@/lib/validations/money";
 
@@ -112,52 +111,6 @@ export async function createCategory(
   revalidatePath("/categories");
   revalidatePath("/transactions");
   revalidatePath("/budget");
-  return { ok: true };
-}
-
-export async function upsertMonthlyBudget(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = monthlyBudgetInputSchema.safeParse({
-    categoryId: formData.get("categoryId"),
-    year: formData.get("year"),
-    month: formData.get("month"),
-    plannedAmount: formData.get("plannedAmount"),
-  });
-
-  if (!parsed.success) {
-    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
-  }
-
-  const db = getDb();
-  const { categoryId, year, month, plannedAmount } = parsed.data;
-
-  const existing = await db.query.monthlyBudgets.findFirst({
-    where: (budget, { and, eq: eqOp }) =>
-      and(
-        eqOp(budget.categoryId, categoryId),
-        eqOp(budget.year, year),
-        eqOp(budget.month, month),
-      ),
-  });
-
-  if (existing) {
-    await db
-      .update(schema.monthlyBudgets)
-      .set({ plannedAmount: plannedAmount.toFixed(2) })
-      .where(eq(schema.monthlyBudgets.id, existing.id));
-  } else {
-    await db.insert(schema.monthlyBudgets).values({
-      categoryId,
-      year,
-      month,
-      plannedAmount: plannedAmount.toFixed(2),
-    });
-  }
-
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
   return { ok: true };
 }
 

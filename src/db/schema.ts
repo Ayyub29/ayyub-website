@@ -7,7 +7,6 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -66,36 +65,12 @@ export const transactions = pgTable("transactions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const monthlyBudgets = pgTable(
-  "monthly_budgets",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    categoryId: uuid("category_id")
-      .notNull()
-      .references(() => categories.id, { onDelete: "cascade" }),
-    year: integer("year").notNull(),
-    month: integer("month").notNull(),
-    plannedAmount: numeric("planned_amount", { precision: 14, scale: 2 })
-      .default("0")
-      .notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("monthly_budgets_category_period_idx").on(
-      table.categoryId,
-      table.year,
-      table.month,
-    ),
-  ],
-);
-
 export const accountsRelations = relations(accounts, ({ many }) => ({
   transactions: many(transactions),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   transactions: many(transactions),
-  monthlyBudgets: many(monthlyBudgets),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -105,13 +80,6 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
   category: one(categories, {
     fields: [transactions.categoryId],
-    references: [categories.id],
-  }),
-}));
-
-export const monthlyBudgetsRelations = relations(monthlyBudgets, ({ one }) => ({
-  category: one(categories, {
-    fields: [monthlyBudgets.categoryId],
     references: [categories.id],
   }),
 }));

@@ -66,9 +66,6 @@ async function main() {
       continue;
     }
 
-    await db
-      .delete(schema.monthlyBudgets)
-      .where(eq(schema.monthlyBudgets.categoryId, category.id));
     await db.delete(schema.categories).where(eq(schema.categories.id, category.id));
     removed += 1;
   }

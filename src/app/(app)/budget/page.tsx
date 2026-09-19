@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/db";
 import { formatMoney, formatMonthYear } from "@/lib/format";
@@ -40,7 +40,6 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
     categoryId: string;
     categoryName: string;
     defaultBudget: string | null;
-    monthBudget: string | null;
   }> = [];
 
   try {
@@ -50,21 +49,12 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
     const expenseCategories = await db.query.categories.findMany({
       where: eq(schema.categories.kind, "expense"),
       orderBy: (cat, { asc }) => [asc(cat.sortOrder), asc(cat.name)],
-      with: {
-        monthlyBudgets: {
-          where: and(
-            eq(schema.monthlyBudgets.year, year),
-            eq(schema.monthlyBudgets.month, month),
-          ),
-        },
-      },
     });
 
     configRows = expenseCategories.map((cat) => ({
       categoryId: cat.id,
       categoryName: cat.name,
       defaultBudget: cat.defaultMonthlyBudget,
-      monthBudget: cat.monthlyBudgets[0]?.plannedAmount ?? null,
     }));
   } catch {
     summary = null;
@@ -75,31 +65,26 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Budget configuration
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Set default monthly limits and optional overrides for{" "}
-            {formatMonthYear(year, month)}.
-          </p>
-        </div>
-        <MonthNav year={year} month={month} basePath="/budget" />
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Budget</h1>
+        <p className="text-sm text-muted-foreground">
+          Set a monthly budget per expense category. The same limit applies every
+          month.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Configure budgets</CardTitle>
+          <CardTitle>Category budgets</CardTitle>
           <CardDescription>
-            Default budget applies every month unless you set an override for a
-            specific month.
+            Planned spending limits used for over/under budget checks.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {configRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Add expense categories first (Categories page).
+              Add expense categories first (
+              <code className="text-xs">npm run db:seed:categories</code>).
             </p>
           ) : (
             configRows.map((row) => (
@@ -108,27 +93,34 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
                 categoryId={row.categoryId}
                 categoryName={row.categoryName}
                 defaultBudget={row.defaultBudget}
-                monthBudget={row.monthBudget}
-                year={year}
-                month={month}
               />
             ))
           )}
         </CardContent>
       </Card>
 
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Status</h2>
+          <p className="text-sm text-muted-foreground">
+            Actual spending for {formatMonthYear(year, month)}
+          </p>
+        </div>
+        <MonthNav year={year} month={month} basePath="/budget" />
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Status this month</CardTitle>
-          <CardDescription>Over budget when spent exceeds planned.</CardDescription>
+          <CardTitle>Budget vs actual</CardTitle>
+          <CardDescription>Over budget when spent exceeds the limit.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Planned</TableHead>
-                <TableHead className="text-right">Actual</TableHead>
+                <TableHead className="text-right">Budget</TableHead>
+                <TableHead className="text-right">Spent</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>

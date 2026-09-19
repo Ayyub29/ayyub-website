@@ -67,19 +67,10 @@ export async function getMonthlySummary(
         kind: schema.categories.kind,
         color: schema.categories.color,
         defaultBudget: schema.categories.defaultMonthlyBudget,
-        monthBudget: schema.monthlyBudgets.plannedAmount,
         actual: sql<string>`coalesce(sum(${schema.transactions.amount}), 0)`,
         sampleCurrency: sql<string>`max(${schema.transactions.currency})`,
       })
       .from(schema.categories)
-      .leftJoin(
-        schema.monthlyBudgets,
-        and(
-          eq(schema.monthlyBudgets.categoryId, schema.categories.id),
-          eq(schema.monthlyBudgets.year, year),
-          eq(schema.monthlyBudgets.month, month),
-        ),
-      )
       .leftJoin(
         schema.transactions,
         and(
@@ -94,7 +85,6 @@ export async function getMonthlySummary(
         schema.categories.kind,
         schema.categories.color,
         schema.categories.defaultMonthlyBudget,
-        schema.monthlyBudgets.plannedAmount,
       )
       .orderBy(schema.categories.sortOrder, schema.categories.name),
     db.query.transactions.findMany({
@@ -112,7 +102,7 @@ export async function getMonthlySummary(
 
   const byCategory: CategoryMonthRow[] = categoryRows.map((row) => {
     const actual = Number(row.actual);
-    const planned = Number(row.monthBudget ?? row.defaultBudget ?? 0);
+    const planned = Number(row.defaultBudget ?? 0);
 
     if (row.kind === "income") {
       income += actual;
