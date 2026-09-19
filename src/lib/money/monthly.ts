@@ -35,7 +35,7 @@ export type MonthlySavingRate = {
   previousTotalBalance: number | null;
   /** Change in total balance vs previous month (display currency) */
   saveAmount: number | null;
-  /** saveAmount / income when both are available */
+  /** (investment + saveAmount) / income when balance change is available */
   savingRatio: number | null;
 };
 
@@ -136,7 +136,9 @@ export function buildSavingRate(
       : null;
 
   const savingRatio =
-    saveAmount != null && income > 0 ? saveAmount / income : null;
+    saveAmount != null && income > 0
+      ? (investment + saveAmount) / income
+      : null;
 
   return {
     income,
