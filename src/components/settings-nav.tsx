@@ -10,6 +10,8 @@ const items = [
   { href: "/settings/categories", label: "Categories" },
   { href: "/settings/budget", label: "Budget" },
   { href: "/settings/portfolio-apps", label: "Portfolio apps" },
+  { href: "/settings/liabilities", label: "Liabilities" },
+  { href: "/settings/finance-health", label: "Finance health" },
 ] as const;
 
 export function SettingsNav() {

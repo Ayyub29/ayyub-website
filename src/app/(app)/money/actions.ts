@@ -266,5 +266,6 @@ export async function upsertMonthlyAccountBalances(
 
   revalidatePath("/dashboard");
   revalidatePath("/accounts/overview");
+  revalidatePath("/statement");
   return { ok: true };
 }

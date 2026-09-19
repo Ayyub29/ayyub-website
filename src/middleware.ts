@@ -8,6 +8,7 @@ const protectedPrefixes = [
   "/accounts",
   "/settings",
   "/portfolio",
+  "/statement",
 ];
 
 export default auth((req) => {
@@ -32,6 +33,7 @@ export const config = {
     "/accounts/:path*",
     "/settings/:path*",
     "/portfolio/:path*",
+    "/statement",
     "/categories/:path*",
     "/budget/:path*",
   ],

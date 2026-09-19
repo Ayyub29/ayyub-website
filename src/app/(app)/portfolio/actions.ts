@@ -94,6 +94,7 @@ function revalidatePortfolioApps() {
   revalidatePath("/portfolio/transactions");
   revalidatePath("/settings/portfolio-apps");
   revalidatePath("/accounts/overview");
+  revalidatePath("/statement");
 }
 
 export async function createPortfolioApplication(

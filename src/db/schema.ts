@@ -37,6 +37,11 @@ export const portfolioCategoryEnum = pgEnum("portfolio_category", [
   "crypto",
 ]);
 
+export const liabilityKindEnum = pgEnum("liability_kind", [
+  "mortgage",
+  "other",
+]);
+
 export const accounts = pgTable("accounts", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
@@ -105,6 +110,27 @@ export const portfolioTransactions = pgTable("portfolio_transactions", {
   description: text("description"),
   transactionDate: date("transaction_date").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const financialLiabilities = pgTable("financial_liabilities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  kind: liabilityKindEnum("kind").default("other").notNull(),
+  balance: numeric("balance", { precision: 14, scale: 2 }).notNull(),
+  annualPayment: numeric("annual_payment", { precision: 14, scale: 2 })
+    .default("0")
+    .notNull(),
+  currency: varchar("currency", { length: 3 }).default("IDR").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Configurable finance health thresholds (single row per key). */
+export const financeHealthThresholds = pgTable("finance_health_thresholds", {
+  key: varchar("key", { length: 80 }).primaryKey(),
+  value: numeric("value", { precision: 14, scale: 4 }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
