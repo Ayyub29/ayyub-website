@@ -61,14 +61,17 @@ export function MonthlyBalanceDialog({
               rate and account overview until you save a newer month.
             </DialogDescription>
           </DialogHeader>
-          <MonthlyBalanceForm
-            year={year}
-            month={month}
-            idrDefault={idrDefault}
-            thbDefault={thbDefault}
-            variant="plain"
-            onSuccess={() => setOpen(false)}
-          />
+          {open ? (
+            <MonthlyBalanceForm
+              key={`${year}-${month}`}
+              year={year}
+              month={month}
+              idrDefault={idrDefault}
+              thbDefault={thbDefault}
+              variant="plain"
+              onSuccess={() => setOpen(false)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </>
