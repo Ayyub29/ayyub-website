@@ -1,6 +1,7 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 
 import { getDb, schema } from "@/db";
+import { isExcludedFromSummaryExpense } from "@/lib/categories/expense-summary";
 import type { SupportedCurrency } from "@/lib/currencies";
 import {
   convertWithMatrix,
@@ -25,7 +26,11 @@ export type MonthlySummary = {
   month: number;
   income: number;
   expenses: number;
+  /** Expenses excluding Goal and Investment categories */
+  expensesExcludingGoalInvestment: number;
   net: number;
+  /** Income minus expensesExcludingGoalInvestment */
+  netExcludingGoalInvestment: number;
   displayCurrency: SupportedCurrency;
   byCategory: CategoryMonthRow[];
   transactions: Array<{
@@ -103,6 +108,7 @@ export async function getMonthlySummary(
   const actualByCategory = new Map<string, number>();
   let income = 0;
   let expenses = 0;
+  let expensesExcludingGoalInvestment = 0;
 
   for (const tx of monthTransactions) {
     const converted = toDisplay(Number(tx.amount), tx.currency, options);
@@ -110,6 +116,9 @@ export async function getMonthlySummary(
       income += converted;
     } else if (tx.category?.kind === "expense") {
       expenses += converted;
+      if (!isExcludedFromSummaryExpense(tx.category.name)) {
+        expensesExcludingGoalInvestment += converted;
+      }
     }
 
     if (tx.categoryId) {
@@ -152,7 +161,9 @@ export async function getMonthlySummary(
     month,
     income,
     expenses,
+    expensesExcludingGoalInvestment,
     net: income - expenses,
+    netExcludingGoalInvestment: income - expensesExcludingGoalInvestment,
     displayCurrency: options.displayCurrency,
     byCategory,
     transactions: monthTransactions.map((tx) => ({

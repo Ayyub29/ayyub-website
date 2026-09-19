@@ -78,7 +78,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <MonthNav year={year} month={month} basePath="/dashboard" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Income</CardDescription>
@@ -89,9 +89,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Expenses</CardDescription>
+            <CardDescription>Total expenses</CardDescription>
             <CardTitle className="text-2xl">
               {money.format(summary.expenses, displayCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Expenses (excl. Goal & Investment)</CardDescription>
+            <CardTitle className="text-2xl">
+              {money.format(
+                summary.expensesExcludingGoalInvestment,
+                displayCurrency,
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -100,6 +111,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <CardDescription>Net</CardDescription>
             <CardTitle className="text-2xl">
               {money.format(summary.net, displayCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Net (excl. Goal & Investment)</CardDescription>
+            <CardTitle className="text-2xl">
+              {money.format(
+                summary.netExcludingGoalInvestment,
+                displayCurrency,
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -131,7 +153,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     </TableCell>
                   </TableRow>
                 ) : (
-                  expenseRows.map((row) => (
+                  expenseRows
+                    .filter((row) => row.actual > 0 || row.planned > 0)
+                    .map((row) => (
                     <TableRow key={row.categoryId}>
                       <TableCell>{row.categoryName}</TableCell>
                       <TableCell className="text-right">
