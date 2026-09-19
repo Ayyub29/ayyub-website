@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getDb, schema } from "@/db";
+import { assertLocalImportAllowed } from "@/lib/import/import-guard";
 
 const importRowSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -18,53 +19,8 @@ const bodySchema = z.object({
   rows: z.array(importRowSchema).min(1).max(5000),
 });
 
-function unauthorized() {
-  return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-}
-
-function assertImportAllowed(request: Request) {
-  const secret = process.env.IMPORT_SECRET?.trim();
-  if (!secret) {
-    return {
-      allowed: false as const,
-      response: NextResponse.json(
-        {
-          ok: false,
-          error:
-            "IMPORT_SECRET is not set. Add it to .env.local for local imports.",
-        },
-        { status: 503 },
-      ),
-    };
-  }
-
-  const provided = request.headers.get("x-import-secret");
-  if (provided !== secret) {
-    return { allowed: false as const, response: unauthorized() };
-  }
-
-  if (
-    process.env.NODE_ENV === "production" &&
-    process.env.ALLOW_CASHFLOW_IMPORT !== "true"
-  ) {
-    return {
-      allowed: false as const,
-      response: NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Cashflow import is disabled in production. Set ALLOW_CASHFLOW_IMPORT=true only if you intend to run this there.",
-        },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { allowed: true as const };
-}
-
 export async function POST(request: Request) {
-  const gate = assertImportAllowed(request);
+  const gate = assertLocalImportAllowed(request);
   if (!gate.allowed) {
     return gate.response;
   }
