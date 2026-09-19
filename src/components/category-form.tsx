@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { createCategory, type ActionResult } from "@/app/(app)/money/actions";
+import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,11 @@ export function CategoryForm() {
       <Button type="submit" disabled={pending}>
         Add category
       </Button>
+      <p className="text-xs text-muted-foreground">
+        Standard set: {DEFAULT_CATEGORIES.map((c) => c.name).join(", ")}. Run{" "}
+        <code className="text-[0.7rem]">npm run db:seed:categories</code> to
+        sync them into the database.
+      </p>
     </form>
   );
 }
