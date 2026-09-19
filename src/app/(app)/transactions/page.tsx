@@ -3,6 +3,7 @@ import { getDisplayMoney } from "@/lib/currency/server-display";
 import { DeleteTransactionButton } from "@/components/delete-transaction-button";
 import { TransactionEditSheet } from "@/components/transaction-edit-sheet";
 import { TransactionForm } from "@/components/transaction-form";
+import { TransactionListToolbar } from "@/components/transaction-list-toolbar";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,32 +20,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { parseTransactionLogQuery } from "@/lib/list-query/transaction-log";
+import { listMoneyTransactions } from "@/lib/money/list-transactions";
 
 export const dynamic = "force-dynamic";
 
-export default async function TransactionsPage() {
+type TransactionsPageProps = {
+  searchParams: Promise<{ from?: string; to?: string; page?: string }>;
+};
+
+export default async function TransactionsPage({
+  searchParams,
+}: TransactionsPageProps) {
+  const params = await searchParams;
+  const listQuery = parseTransactionLogQuery(params);
   const today = new Date().toISOString().slice(0, 10);
   let categories: Array<{ id: string; name: string; kind: "income" | "expense" }> =
     [];
   let rows;
   let money;
+  let totalCount = 0;
+  let page = listQuery.page;
 
   try {
     const db = getDb();
     money = await getDisplayMoney();
-    [categories, rows] = await Promise.all([
+    const [cats, listResult] = await Promise.all([
       db.query.categories.findMany({
         columns: { id: true, name: true, kind: true },
         orderBy: (cat, { asc }) => [asc(cat.kind), asc(cat.name)],
       }),
-      db.query.transactions.findMany({
-        orderBy: (transactions, { desc: d }) => [
-          d(transactions.transactionDate),
-          d(transactions.createdAt),
-        ],
-        with: { category: true },
-      }),
+      listMoneyTransactions(listQuery),
     ]);
+    categories = cats;
+    rows = listResult.rows;
+    totalCount = listResult.totalCount;
+    page = listResult.page;
   } catch {
     categories = [];
     rows = [] as NonNullable<typeof rows>;
@@ -58,8 +69,8 @@ export default async function TransactionsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
         <p className="text-sm text-muted-foreground">
-          Log daily spending and income. List shows amounts converted to{" "}
-          {displayCurrency} (toggle in the header).
+          Log daily spending and income. List shows the last three months by
+          default (amounts converted to {displayCurrency}; toggle in the header).
         </p>
       </div>
 
@@ -84,10 +95,16 @@ export default async function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All transactions</CardTitle>
-          <CardDescription>Newest first</CardDescription>
+          <CardTitle>Transactions</CardTitle>
+          <CardDescription>Newest first within the selected date range</CardDescription>
         </CardHeader>
         <CardContent>
+          <TransactionListToolbar
+            basePath="/transactions"
+            query={listQuery}
+            totalCount={totalCount}
+            page={page}
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -103,7 +120,8 @@ export default async function TransactionsPage() {
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-muted-foreground">
-                    No transactions yet.
+                    No transactions in this range. Widen the dates above or add a
+                    new entry.
                   </TableCell>
                 </TableRow>
               ) : (

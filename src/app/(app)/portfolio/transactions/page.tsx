@@ -1,6 +1,8 @@
+import { getDb } from "@/db";
 import { DeletePortfolioTransactionButton } from "@/components/delete-portfolio-transaction-button";
 import { PortfolioTransactionEditSheet } from "@/components/portfolio-transaction-edit-sheet";
 import { PortfolioTransactionForm } from "@/components/portfolio-transaction-form";
+import { TransactionListToolbar } from "@/components/transaction-list-toolbar";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -17,7 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { loadPortfolioData } from "@/lib/portfolio/load";
+import { getDisplayMoney } from "@/lib/currency/server-display";
+import { parseTransactionLogQuery } from "@/lib/list-query/transaction-log";
+import { listPortfolioLogTransactions } from "@/lib/portfolio/list-log-transactions";
 import {
   PORTFOLIO_CATEGORY_LABELS,
   PORTFOLIO_TX_TYPE_LABELS,
@@ -33,19 +37,44 @@ function formatQuantity(value: string) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(n);
 }
 
-export default async function PortfolioTransactionsPage() {
+type PortfolioTransactionsPageProps = {
+  searchParams: Promise<{ from?: string; to?: string; page?: string }>;
+};
+
+export default async function PortfolioTransactionsPage({
+  searchParams,
+}: PortfolioTransactionsPageProps) {
+  const params = await searchParams;
+  const listQuery = parseTransactionLogQuery(params);
   const today = new Date().toISOString().slice(0, 10);
-  let data;
+
+  let applications: Array<{ id: string; name: string; sortOrder: number }> = [];
+  let rows: Awaited<ReturnType<typeof listPortfolioLogTransactions>>["rows"] =
+    [];
+  let money: Awaited<ReturnType<typeof getDisplayMoney>> | null = null;
+  let totalCount = 0;
+  let page = listQuery.page;
 
   try {
-    data = await loadPortfolioData();
+    const db = getDb();
+    const [apps, displayMoney, listResult] = await Promise.all([
+      db.query.portfolioApplications.findMany({
+        orderBy: (app, { asc }) => [asc(app.sortOrder), asc(app.name)],
+      }),
+      getDisplayMoney(),
+      listPortfolioLogTransactions(listQuery),
+    ]);
+    applications = apps;
+    money = displayMoney;
+    rows = listResult.rows;
+    totalCount = listResult.totalCount;
+    page = listResult.page;
   } catch {
-    data = null;
+    applications = [];
+    rows = [];
+    money = null;
   }
 
-  const applications = data?.applications ?? [];
-  const rows = data?.rows ?? [];
-  const money = data?.money;
   const displayCurrency = money?.displayCurrency ?? "IDR";
 
   return (
@@ -56,7 +85,7 @@ export default async function PortfolioTransactionsPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Deposits and draws move idle cash inside an app; buys and sells use
-          that cash for positions.
+          that cash for positions. The log defaults to the last three months.
         </p>
       </div>
 
@@ -90,9 +119,15 @@ export default async function PortfolioTransactionsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Log</CardTitle>
-          <CardDescription>{rows.length} entries</CardDescription>
+          <CardDescription>Newest first within the selected date range</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
+          <TransactionListToolbar
+            basePath="/portfolio/transactions"
+            query={listQuery}
+            totalCount={totalCount}
+            page={page}
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -112,7 +147,8 @@ export default async function PortfolioTransactionsPage() {
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-muted-foreground">
-                    No portfolio transactions yet.
+                    No portfolio transactions in this range. Widen the dates
+                    above or add an entry.
                   </TableCell>
                 </TableRow>
               ) : (
