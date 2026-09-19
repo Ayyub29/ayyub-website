@@ -306,12 +306,18 @@ export async function loadFinancialStatement(
   const avgMonthlyExpense =
     yearly.expensesExcludingGoalInvestment / divisor;
 
-  let annualSavings = yearly.savingRate.saveAmount ?? 0;
-  if (annualSavings === 0 && yearly.income > 0) {
+  let annualSavings =
+    yearly.savingRate.saveAmount != null
+      ? yearly.savingRate.investment + yearly.savingRate.saveAmount
+      : null;
+  if (annualSavings == null && yearly.income > 0) {
     annualSavings =
       yearly.income -
       yearly.expensesExcludingGoalInvestment -
       yearly.investment;
+  }
+  if (annualSavings == null) {
+    annualSavings = 0;
   }
 
   const annualLoanPayments = liabilityLines.reduce(

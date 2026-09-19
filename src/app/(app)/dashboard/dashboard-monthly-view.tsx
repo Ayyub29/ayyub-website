@@ -69,7 +69,8 @@ export function DashboardMonthlyView({
             <CardDescription>
               End-of-month IDR and THB balances for this month. Total balance
               sums both in {displayCurrency}. Save amount is the change vs the
-              previous month; saving ratio is save amount divided by income.
+              previous month; saving ratio is (investment + that change) divided
+              by income.
             </CardDescription>
           </div>
           <MonthlyBalanceDialog

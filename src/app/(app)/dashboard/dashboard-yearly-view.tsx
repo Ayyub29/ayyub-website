@@ -127,8 +127,8 @@ export function DashboardYearlyView({
           <CardTitle>Saving rate by month</CardTitle>
           <CardDescription>
             Balances are entered on each month&apos;s summary. Save amount is
-            month-over-month change in total balance; saving ratio is save
-            amount ÷ income.
+            month-over-month change in total balance; saving ratio is
+            (investment + save amount) ÷ income.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -207,7 +207,8 @@ export function DashboardYearlyView({
           <CardDescription>
             Flow totals are summed across the year. End-of-year balances use
             December {year}; save amount compares December {year} to December{" "}
-            {year - 1}. Enter balances in the monthly view.
+            {year - 1}. Saving ratio uses full-year investment plus that balance
+            change, divided by income. Enter balances in the monthly view.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

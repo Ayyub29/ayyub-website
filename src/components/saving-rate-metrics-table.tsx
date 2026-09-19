@@ -79,7 +79,12 @@ export function SavingRateMetricsTable({
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell className="font-medium">Saving ratio</TableCell>
+            <TableCell className="font-medium">
+              Saving ratio
+              <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                (Investment + save amount) ÷ income
+              </span>
+            </TableCell>
             <TableCell className="text-right">
               {saving.savingRatio != null
                 ? formatPercent(saving.savingRatio)
