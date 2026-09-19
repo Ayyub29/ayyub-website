@@ -1,4 +1,5 @@
-import { MonthlyBalanceForm } from "@/components/monthly-balance-form";
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -51,21 +52,15 @@ export default async function AccountOverviewPage() {
   const formatDisplay = (amount: number) =>
     money.format(amount, displayCurrency);
 
-  const idrDefault =
-    overview.idrBalance != null
-      ? formatBudgetInputAmount(overview.idrBalance, "IDR")
-      : "";
-  const thbDefault =
-    overview.thbBalance != null
-      ? formatBudgetInputAmount(overview.thbBalance, "THB")
-      : "";
+  const hasBankBalances =
+    overview.balanceYear != null && overview.balanceMonth != null;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account overview</h1>
         <p className="text-sm text-muted-foreground">
-          Bank balances you enter below plus portfolio apps (idle cash + live
+          Last saved bank balances plus portfolio apps (idle cash + live
           investment values where available) · totals in {displayCurrency}
         </p>
       </div>
@@ -97,18 +92,28 @@ export default async function AccountOverviewPage() {
         <CardHeader>
           <CardTitle>Bank accounts</CardTitle>
           <CardDescription>
-            Saved for {formatMonthYear(overview.year, overview.month)} (same as
-            monthly saving rate on the dashboard). Update anytime here.
+            {hasBankBalances ? (
+              <>
+                Showing end-of-month balances from{" "}
+                {formatMonthYear(overview.balanceYear!, overview.balanceMonth!)}
+                . Enter a new month on{" "}
+                <Link href="/dashboard" className="text-foreground underline">
+                  Summary
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                No balances saved yet. Add them from{" "}
+                <Link href="/dashboard" className="text-foreground underline">
+                  Summary
+                </Link>
+                .
+              </>
+            )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <MonthlyBalanceForm
-            year={overview.year}
-            month={overview.month}
-            idrDefault={idrDefault}
-            thbDefault={thbDefault}
-          />
-
+        <CardContent>
           <Table>
             <TableBody>
               <TableRow>

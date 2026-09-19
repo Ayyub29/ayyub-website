@@ -338,6 +338,27 @@ export async function getMonthlySummary(
   };
 }
 
+export async function getLatestMonthlyAccountBalance() {
+  const db = getDb();
+  return db.query.monthlyAccountBalances.findFirst({
+    orderBy: (row, { desc }) => [desc(row.year), desc(row.month)],
+  });
+}
+
+export function monthNeedsAccountBalances(
+  balanceRow: AccountBalanceRow | null | undefined,
+): boolean {
+  if (!balanceRow) {
+    return true;
+  }
+  return (
+    balanceRow.idrBalance == null ||
+    balanceRow.thbBalance == null ||
+    balanceRow.idrBalance === "" ||
+    balanceRow.thbBalance === ""
+  );
+}
+
 export function parseYearMonth(
   yearParam?: string,
   monthParam?: string,
