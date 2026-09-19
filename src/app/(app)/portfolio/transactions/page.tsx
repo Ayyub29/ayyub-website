@@ -70,8 +70,9 @@ export default async function PortfolioTransactionsPage() {
         <CardContent>
           {applications.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Run <code className="text-xs">npm run db:seed:portfolio</code> to
-              create Ajaib, ALAMI, Bibit, Ajaib Alpha, and IBKR.
+              Add applications in Settings → Portfolio apps, or run{" "}
+              <code className="text-xs">npm run db:seed:portfolio</code> for the
+              starter list.
             </p>
           ) : (
             <PortfolioTransactionForm

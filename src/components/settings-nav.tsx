@@ -9,6 +9,7 @@ const items = [
   { href: "/settings/general", label: "General" },
   { href: "/settings/categories", label: "Categories" },
   { href: "/settings/budget", label: "Budget" },
+  { href: "/settings/portfolio-apps", label: "Portfolio apps" },
 ] as const;
 
 export function SettingsNav() {

@@ -31,6 +31,19 @@ const baseSchema = z.object({
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
 });
 
+export const portfolioApplicationInputSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  sortOrder: z.preprocess(
+    (v) => (v === "" || v === null ? undefined : v),
+    z.coerce.number().int().min(0).max(9999).optional(),
+  ),
+});
+
+export const portfolioApplicationUpdateSchema =
+  portfolioApplicationInputSchema.extend({
+    id: z.string().uuid(),
+  });
+
 export const portfolioTransactionInputSchema = baseSchema.superRefine(
   (data, ctx) => {
     const isTrade = data.type === "buy" || data.type === "sell";
