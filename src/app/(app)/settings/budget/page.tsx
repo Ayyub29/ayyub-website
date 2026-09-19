@@ -61,11 +61,12 @@ export default async function SettingsBudgetPage({
       orderBy: (cat, { asc }) => [asc(cat.sortOrder), asc(cat.name)],
     });
 
+    const displayMoney = money;
     configRows = expenseCategories.map((cat) => {
       const storedCurrency = cat.budgetCurrency ?? "IDR";
       const converted =
         cat.defaultMonthlyBudget != null
-          ? money.convert(cat.defaultMonthlyBudget, storedCurrency)
+          ? displayMoney.convert(cat.defaultMonthlyBudget, storedCurrency)
           : 0;
 
       return {
@@ -75,7 +76,7 @@ export default async function SettingsBudgetPage({
         storedCurrency: cat.budgetCurrency,
         displayAmount: formatBudgetInputAmount(
           converted,
-          money.displayCurrency,
+          displayMoney.displayCurrency,
         ),
       };
     });
