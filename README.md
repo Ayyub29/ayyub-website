@@ -29,7 +29,13 @@ npm install
 cp .env.example .env.local
 ```
 
-Set `DATABASE_URL` in `.env.local`.
+Set `DATABASE_URL` in `.env.local` (project root, same folder as `package.json`).
+
+Drizzle CLI (`npm run db:push`, `db:seed`, etc.) reads `.env.local` automatically via `drizzle.config.ts`. If you still see a missing `url` error, check that the line is not empty and quotes are balanced:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+```
 
 ### 3. Google OAuth
 
