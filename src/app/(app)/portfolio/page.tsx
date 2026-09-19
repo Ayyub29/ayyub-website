@@ -158,7 +158,7 @@ export default async function PortfolioSummaryPage() {
         <CardContent className="space-y-6">
           {summary.byApplication.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Seed applications with{" "}
+              Add apps in Settings → Portfolio apps, or run{" "}
               <code className="text-xs">npm run db:seed:portfolio</code>.
             </p>
           ) : (
