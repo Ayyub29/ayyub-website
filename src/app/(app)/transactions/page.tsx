@@ -1,6 +1,7 @@
 import { getDb } from "@/db";
 import { getDisplayMoney } from "@/lib/currency/server-display";
 import { DeleteTransactionButton } from "@/components/delete-transaction-button";
+import { TransactionEditSheet } from "@/components/transaction-edit-sheet";
 import { TransactionForm } from "@/components/transaction-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -95,7 +96,7 @@ export default async function TransactionsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead className="text-right">{displayCurrency}</TableHead>
                 <TableHead className="text-right">Original</TableHead>
-                <TableHead className="w-[80px]" />
+                <TableHead className="w-[140px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -126,7 +127,22 @@ export default async function TransactionsPage() {
                       {tx.amount} {tx.currency}
                     </TableCell>
                     <TableCell>
-                      <DeleteTransactionButton id={tx.id} />
+                      <div className="flex justify-end gap-1">
+                        {tx.categoryId ? (
+                          <TransactionEditSheet
+                            categories={categories}
+                            transaction={{
+                              id: tx.id,
+                              name: tx.name,
+                              amount: tx.amount,
+                              currency: tx.currency,
+                              transactionDate: tx.transactionDate,
+                              categoryId: tx.categoryId,
+                            }}
+                          />
+                        ) : null}
+                        <DeleteTransactionButton id={tx.id} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

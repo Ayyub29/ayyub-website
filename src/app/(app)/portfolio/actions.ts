@@ -9,6 +9,7 @@ import {
   portfolioApplicationUpdateSchema,
   portfolioManualDividendSchema,
   portfolioTransactionInputSchema,
+  portfolioTransactionUpdateSchema,
 } from "@/lib/validations/portfolio";
 
 export type PortfolioActionResult =
@@ -68,6 +69,65 @@ export async function createPortfolioTransaction(
   revalidatePath("/portfolio");
   revalidatePath("/portfolio/transactions");
   revalidatePath("/accounts/overview");
+  revalidatePath("/statement");
+  return { ok: true };
+}
+
+export async function updatePortfolioTransaction(
+  _prev: PortfolioActionResult | null,
+  formData: FormData,
+): Promise<PortfolioActionResult> {
+  const parsed = portfolioTransactionUpdateSchema.safeParse({
+    id: formData.get("id"),
+    type: formData.get("type"),
+    applicationId: formData.get("applicationId"),
+    name: formData.get("name"),
+    value: formData.get("value"),
+    transactionAmount: formData.get("transactionAmount"),
+    currency: formData.get("currency"),
+    category: formData.get("category"),
+    description: formData.get("description"),
+    transactionDate: formData.get("transactionDate"),
+  });
+
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const db = getDb();
+  const application = await db.query.portfolioApplications.findFirst({
+    where: eq(schema.portfolioApplications.id, parsed.data.applicationId),
+  });
+
+  if (!application) {
+    return fail("Application not found");
+  }
+
+  const data = parsed.data;
+  const name =
+    data.name.trim() ||
+    (data.type === "deposit" ? "Account deposit" : "Account draw");
+
+  await db
+    .update(schema.portfolioTransactions)
+    .set({
+      applicationId: data.applicationId,
+      type: data.type,
+      category: data.category ?? null,
+      name,
+      value: (data.value ?? 0).toFixed(4),
+      transactionAmount: data.transactionAmount.toFixed(2),
+      currency: data.currency,
+      description: data.description ?? null,
+      transactionDate: data.transactionDate,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.portfolioTransactions.id, data.id));
+
+  revalidatePath("/portfolio");
+  revalidatePath("/portfolio/transactions");
+  revalidatePath("/accounts/overview");
+  revalidatePath("/statement");
   return { ok: true };
 }
 
