@@ -29,6 +29,13 @@
       "when": 1789811993407,
       "tag": "0003_boring_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789812500000,
+      "tag": "0004_monthly_account_balances",
+      "breakpoints": true
     }
   ]
 }

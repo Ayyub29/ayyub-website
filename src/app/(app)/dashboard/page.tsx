@@ -1,5 +1,6 @@
 import { getDisplayMoney } from "@/lib/currency/server-display";
-import { formatMonthYear } from "@/lib/format";
+import { MonthlyBalanceForm } from "@/components/monthly-balance-form";
+import { formatBudgetInputAmount, formatMonthYear, formatPercent } from "@/lib/format";
 import { getMonthlySummary, parseYearMonth } from "@/lib/money/monthly";
 import { BudgetStatusBadge } from "@/components/budget-status-badge";
 import { MonthNav } from "@/components/month-nav";
@@ -65,6 +66,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const expenseRows = summary.byCategory.filter((row) => row.kind === "expense");
   const incomeRows = summary.byCategory.filter((row) => row.kind === "income");
   const { displayCurrency } = money;
+  const saving = summary.savingRate;
+
+  const idrFormDefault =
+    saving.idrBalance != null
+      ? formatBudgetInputAmount(saving.idrBalance, "IDR")
+      : "";
+  const thbFormDefault =
+    saving.thbBalance != null
+      ? formatBudgetInputAmount(saving.thbBalance, "THB")
+      : "";
 
   return (
     <div className="space-y-8">
@@ -126,6 +137,99 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardHeader>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly saving rate</CardTitle>
+          <CardDescription>
+            Enter end-of-month IDR and THB account balances. Total balance sums
+            both in {displayCurrency}. Save amount is the change in total
+            balance vs the previous month; saving ratio is save amount divided
+            by income.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <MonthlyBalanceForm
+            year={year}
+            month={month}
+            idrDefault={idrFormDefault}
+            thbDefault={thbFormDefault}
+          />
+
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Income</TableCell>
+                <TableCell className="text-right">
+                  {money.format(saving.income, displayCurrency)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">
+                  Expense (excl. Goal & Investment)
+                </TableCell>
+                <TableCell className="text-right">
+                  {money.format(saving.expense, displayCurrency)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Investment</TableCell>
+                <TableCell className="text-right">
+                  {money.format(saving.investment, displayCurrency)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">IDR account balance</TableCell>
+                <TableCell className="text-right">
+                  {saving.idrBalance != null
+                    ? money.format(saving.idrBalance, "IDR")
+                    : "—"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">THB account balance</TableCell>
+                <TableCell className="text-right">
+                  {saving.thbBalance != null
+                    ? money.format(saving.thbBalance, "THB")
+                    : "—"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">
+                  Total balance ({displayCurrency})
+                </TableCell>
+                <TableCell className="text-right">
+                  {saving.totalBalance != null
+                    ? money.format(saving.totalBalance, displayCurrency)
+                    : "—"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Save amount</TableCell>
+                <TableCell className="text-right">
+                  {saving.saveAmount != null
+                    ? money.format(saving.saveAmount, displayCurrency)
+                    : "—"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Saving ratio</TableCell>
+                <TableCell className="text-right">
+                  {saving.savingRatio != null
+                    ? formatPercent(saving.savingRatio)
+                    : "—"}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          {saving.saveAmount == null && saving.totalBalance != null ? (
+            <p className="text-sm text-muted-foreground">
+              Save amount and saving ratio appear once you enter balances for
+              the previous month as well.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

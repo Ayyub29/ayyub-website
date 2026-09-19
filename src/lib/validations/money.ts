@@ -31,3 +31,10 @@ export const categoryBudgetDefaultSchema = z.object({
   categoryId: z.string().uuid(),
   defaultMonthlyBudget: z.coerce.number().min(0),
 });
+
+export const monthlyAccountBalanceSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+  idrBalance: z.coerce.number().min(0, "IDR balance cannot be negative"),
+  thbBalance: z.coerce.number().min(0, "THB balance cannot be negative"),
+});

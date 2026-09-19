@@ -35,3 +35,11 @@ export function formatMonthYear(year: number, month: number) {
     year: "numeric",
   });
 }
+
+export function formatPercent(ratio: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "percent",
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(ratio);
+}

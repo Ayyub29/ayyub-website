@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -48,6 +49,22 @@ export const categories = pgTable("categories", {
   budgetCurrency: varchar("budget_currency", { length: 3 }).default("IDR"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** End-of-month cash balances entered manually (IDR + THB accounts). */
+export const monthlyAccountBalances = pgTable(
+  "monthly_account_balances",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    year: integer("year").notNull(),
+    month: integer("month").notNull(),
+    idrBalance: numeric("idr_balance", { precision: 14, scale: 2 }).notNull(),
+    thbBalance: numeric("thb_balance", { precision: 14, scale: 2 }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [unique("monthly_account_balances_year_month").on(table.year, table.month)],
+);
 
 export const transactions = pgTable("transactions", {
   id: uuid("id").defaultRandom().primaryKey(),

@@ -9,6 +9,7 @@ import {
   categoryBudgetDefaultSchema,
   categoryInputSchema,
   categoryUpdateSchema,
+  monthlyAccountBalanceSchema,
   transactionInputSchema,
 } from "@/lib/validations/money";
 
@@ -220,6 +221,49 @@ export async function updateCategoryDefaultBudget(
 
   revalidatePath("/settings/budget");
   revalidatePath("/settings/categories");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function upsertMonthlyAccountBalances(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = monthlyAccountBalanceSchema.safeParse({
+    year: formData.get("year"),
+    month: formData.get("month"),
+    idrBalance: formData.get("idrBalance"),
+    thbBalance: formData.get("thbBalance"),
+  });
+
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const db = getDb();
+  const { year, month, idrBalance, thbBalance } = parsed.data;
+
+  await db
+    .insert(schema.monthlyAccountBalances)
+    .values({
+      year,
+      month,
+      idrBalance: idrBalance.toFixed(2),
+      thbBalance: thbBalance.toFixed(2),
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        schema.monthlyAccountBalances.year,
+        schema.monthlyAccountBalances.month,
+      ],
+      set: {
+        idrBalance: idrBalance.toFixed(2),
+        thbBalance: thbBalance.toFixed(2),
+        updatedAt: new Date(),
+      },
+    });
+
   revalidatePath("/dashboard");
   return { ok: true };
 }

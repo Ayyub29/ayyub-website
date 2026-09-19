@@ -4,8 +4,14 @@ export const SUMMARY_EXCLUDED_EXPENSE_CATEGORY_NAMES = [
   "Investment",
 ] as const;
 
+export const INVESTMENT_CATEGORY_NAME = "Investment";
+
 export function isExcludedFromSummaryExpense(categoryName: string) {
   return (
     SUMMARY_EXCLUDED_EXPENSE_CATEGORY_NAMES as readonly string[]
   ).includes(categoryName);
+}
+
+export function isInvestmentCategory(categoryName: string) {
+  return categoryName === INVESTMENT_CATEGORY_NAME;
 }

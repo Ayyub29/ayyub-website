@@ -1,7 +1,10 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 
 import { getDb, schema } from "@/db";
-import { isExcludedFromSummaryExpense } from "@/lib/categories/expense-summary";
+import {
+  isExcludedFromSummaryExpense,
+  isInvestmentCategory,
+} from "@/lib/categories/expense-summary";
 import type { SupportedCurrency } from "@/lib/currencies";
 import {
   convertWithMatrix,
@@ -21,6 +24,21 @@ export type CategoryMonthRow = {
   status: BudgetStatus;
 };
 
+export type MonthlySavingRate = {
+  income: number;
+  /** Day-to-day expenses (excludes Goal & Investment categories) */
+  expense: number;
+  investment: number;
+  idrBalance: number | null;
+  thbBalance: number | null;
+  totalBalance: number | null;
+  previousTotalBalance: number | null;
+  /** Change in total balance vs previous month (display currency) */
+  saveAmount: number | null;
+  /** saveAmount / income when both are available */
+  savingRatio: number | null;
+};
+
 export type MonthlySummary = {
   year: number;
   month: number;
@@ -28,9 +46,11 @@ export type MonthlySummary = {
   expenses: number;
   /** Expenses excluding Goal and Investment categories */
   expensesExcludingGoalInvestment: number;
+  investment: number;
   net: number;
   /** Income minus expensesExcludingGoalInvestment */
   netExcludingGoalInvestment: number;
+  savingRate: MonthlySavingRate;
   displayCurrency: SupportedCurrency;
   byCategory: CategoryMonthRow[];
   transactions: Array<{
@@ -52,6 +72,31 @@ function monthBounds(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, "0")}-01`;
   const end = new Date(year, month, 0).toISOString().slice(0, 10);
   return { start, end };
+}
+
+export function previousYearMonth(year: number, month: number) {
+  if (month <= 1) {
+    return { year: year - 1, month: 12 };
+  }
+  return { year, month: month - 1 };
+}
+
+function totalBalanceInDisplay(
+  idrBalance: string | null | undefined,
+  thbBalance: string | null | undefined,
+  options: MonthlySummaryOptions,
+): number | null {
+  if (idrBalance == null || thbBalance == null) {
+    return null;
+  }
+  const idr = Number(idrBalance);
+  const thb = Number(thbBalance);
+  if (Number.isNaN(idr) || Number.isNaN(thb)) {
+    return null;
+  }
+  return (
+    toDisplay(idr, "IDR", options) + toDisplay(thb, "THB", options)
+  );
 }
 
 function budgetStatus(planned: number, actual: number): BudgetStatus {
@@ -91,7 +136,10 @@ export async function getMonthlySummary(
   const db = getDb();
   const { start, end } = monthBounds(year, month);
 
-  const [categories, monthTransactions] = await Promise.all([
+  const prev = previousYearMonth(year, month);
+
+  const [categories, monthTransactions, balanceRow, previousBalanceRow] =
+    await Promise.all([
     db.query.categories.findMany({
       orderBy: (cat, { asc }) => [asc(cat.sortOrder), asc(cat.name)],
     }),
@@ -103,12 +151,25 @@ export async function getMonthlySummary(
       orderBy: (tx, { desc }) => [desc(tx.transactionDate), desc(tx.createdAt)],
       with: { category: true },
     }),
+    db.query.monthlyAccountBalances.findFirst({
+      where: and(
+        eq(schema.monthlyAccountBalances.year, year),
+        eq(schema.monthlyAccountBalances.month, month),
+      ),
+    }),
+    db.query.monthlyAccountBalances.findFirst({
+      where: and(
+        eq(schema.monthlyAccountBalances.year, prev.year),
+        eq(schema.monthlyAccountBalances.month, prev.month),
+      ),
+    }),
   ]);
 
   const actualByCategory = new Map<string, number>();
   let income = 0;
   let expenses = 0;
   let expensesExcludingGoalInvestment = 0;
+  let investment = 0;
 
   for (const tx of monthTransactions) {
     const converted = toDisplay(Number(tx.amount), tx.currency, options);
@@ -116,6 +177,9 @@ export async function getMonthlySummary(
       income += converted;
     } else if (tx.category?.kind === "expense") {
       expenses += converted;
+      if (tx.category && isInvestmentCategory(tx.category.name)) {
+        investment += converted;
+      }
       if (!isExcludedFromSummaryExpense(tx.category.name)) {
         expensesExcludingGoalInvestment += converted;
       }
@@ -156,14 +220,51 @@ export async function getMonthlySummary(
     };
   });
 
+  const idrBalance = balanceRow ? Number(balanceRow.idrBalance) : null;
+  const thbBalance = balanceRow ? Number(balanceRow.thbBalance) : null;
+  const totalBalance = balanceRow
+    ? totalBalanceInDisplay(
+        balanceRow.idrBalance,
+        balanceRow.thbBalance,
+        options,
+      )
+    : null;
+  const previousTotalBalance = previousBalanceRow
+    ? totalBalanceInDisplay(
+        previousBalanceRow.idrBalance,
+        previousBalanceRow.thbBalance,
+        options,
+      )
+    : null;
+
+  const saveAmount =
+    totalBalance != null && previousTotalBalance != null
+      ? totalBalance - previousTotalBalance
+      : null;
+
+  const savingRatio =
+    saveAmount != null && income > 0 ? saveAmount / income : null;
+
   return {
     year,
     month,
     income,
     expenses,
     expensesExcludingGoalInvestment,
+    investment,
     net: income - expenses,
     netExcludingGoalInvestment: income - expensesExcludingGoalInvestment,
+    savingRate: {
+      income,
+      expense: expensesExcludingGoalInvestment,
+      investment,
+      idrBalance,
+      thbBalance,
+      totalBalance,
+      previousTotalBalance,
+      saveAmount,
+      savingRatio,
+    },
     displayCurrency: options.displayCurrency,
     byCategory,
     transactions: monthTransactions.map((tx) => ({
