@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Monthly summary" },
   { href: "/dashboard/yearly", label: "Yearly summary" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/transactions", label: "Transactions" },
   { href: "/settings", label: "Settings" },
 ] as const;
@@ -23,7 +24,11 @@ export function AppNav() {
             ? pathname === "/dashboard" ||
               (pathname.startsWith("/dashboard/") &&
                 !pathname.startsWith("/dashboard/yearly"))
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            : item.href === "/portfolio"
+              ? pathname === "/portfolio" ||
+                pathname.startsWith("/portfolio/")
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
         return (
           <Link
