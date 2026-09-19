@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import {
   upsertMonthlyAccountBalances,
@@ -34,6 +34,13 @@ export function MonthlyBalanceForm({
     upsertMonthlyAccountBalances,
     initialState,
   );
+  const [idrBalance, setIdrBalance] = useState(idrDefault);
+  const [thbBalance, setThbBalance] = useState(thbDefault);
+
+  useEffect(() => {
+    setIdrBalance(idrDefault);
+    setThbBalance(thbDefault);
+  }, [year, month, idrDefault, thbDefault]);
 
   useEffect(() => {
     if (state?.ok) {
@@ -62,7 +69,8 @@ export function MonthlyBalanceForm({
           min="0"
           step="1"
           required
-          defaultValue={idrDefault}
+          value={idrBalance}
+          onValueChange={setIdrBalance}
           placeholder="0"
         />
       </div>
@@ -76,7 +84,8 @@ export function MonthlyBalanceForm({
           min="0"
           step="0.01"
           required
-          defaultValue={thbDefault}
+          value={thbBalance}
+          onValueChange={setThbBalance}
           placeholder="0"
         />
       </div>
