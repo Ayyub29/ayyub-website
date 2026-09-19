@@ -24,7 +24,16 @@ import {
   type ManualDividendRow,
 } from "@/lib/portfolio/dividends";
 import { loadPortfolioData } from "@/lib/portfolio/load";
+import {
+  sumNetInvestedDisplay,
+  sumPricedCostBasisDisplay,
+  sumUnrealizedPnlDisplay,
+  holdingUnrealizedPnlDisplay,
+  unrealizedReturnRatio,
+} from "@/lib/portfolio/pnl";
 import { sumCurrentAmountDisplay } from "@/lib/portfolio/quotes";
+import { UnrealizedPnlCell } from "@/components/unrealized-pnl-cell";
+import { formatPercent } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +99,15 @@ export default async function PortfolioSummaryPage() {
     ? manualDividendHoldingOptions(summary, manualRows)
     : [];
 
+  const totalCostBasis = sumNetInvestedDisplay(summary.holdings);
+  const totalMarketValue = sumCurrentAmountDisplay(summary.holdings);
+  const totalUnrealizedPnl = sumUnrealizedPnlDisplay(summary.holdings);
+  const pricedCostBasis = sumPricedCostBasisDisplay(summary.holdings);
+  const totalReturnRatio = unrealizedReturnRatio(
+    totalUnrealizedPnl,
+    pricedCostBasis,
+  );
+
   return (
     <div className="space-y-8">
       <div>
@@ -101,21 +119,66 @@ export default async function PortfolioSummaryPage() {
       </div>
 
       {summary.holdings.length > 0 ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Mark-to-market (quoted assets)</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatDisplay(sumCurrentAmountDisplay(summary.holdings))}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              IDX stocks: Yahoo Finance ({`*.JK`}, 15 min cache). BTC: CoinGecko.
-              P2P & obligasi have no live price yet. Stock units are lots (100
-              shares).
-            </p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Market value (quoted)</CardDescription>
+              <CardTitle className="text-2xl">
+                {formatDisplay(totalMarketValue)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Cost basis (open positions)</CardDescription>
+              <CardTitle className="text-2xl">
+                {formatDisplay(totalCostBasis)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Unrealized P/L (quoted only)</CardDescription>
+              <CardTitle className="text-2xl">
+                <UnrealizedPnlCell
+                  pnl={totalUnrealizedPnl}
+                  costBasis={pricedCostBasis}
+                  formatDisplay={formatDisplay}
+                  className="text-left [&>div]:text-2xl [&>div]:font-semibold"
+                />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Unrealized return</CardDescription>
+              <CardTitle className="text-2xl">
+                {totalReturnRatio != null ? (
+                  <span
+                    className={
+                      totalReturnRatio >= 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400"
+                    }
+                  >
+                    {totalReturnRatio >= 0 ? "+" : ""}
+                    {formatPercent(totalReturnRatio)}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      ) : null}
+
+      {summary.holdings.length > 0 ? (
+        <p className="text-xs text-muted-foreground -mt-4">
+          Floating P/L = current price − net invested per line (display currency).
+          IDX: Yahoo ({`*.JK`}). BTC: CoinGecko. P2P/obligasi without quotes show
+          — until priced. Stock units are lots (100 shares).
+        </p>
       ) : null}
 
       {dividendReady && dividendProjection ? (
@@ -156,12 +219,13 @@ export default async function PortfolioSummaryPage() {
                 <TableHead className="text-right">Current price</TableHead>
                 <TableHead className="text-right">Current amount</TableHead>
                 <TableHead className="text-right">Net invested</TableHead>
+                <TableHead className="text-right">Unrealized P/L</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {summary.holdings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground">
+                  <TableCell colSpan={8} className="text-muted-foreground">
                     No open positions yet. Log a buy transaction to start.
                   </TableCell>
                 </TableRow>
@@ -192,6 +256,13 @@ export default async function PortfolioSummaryPage() {
                     />
                     <TableCell className="text-right">
                       {formatDisplay(row.netInvestedDisplay)}
+                    </TableCell>
+                    <TableCell>
+                      <UnrealizedPnlCell
+                        pnl={holdingUnrealizedPnlDisplay(row)}
+                        costBasis={row.netInvestedDisplay}
+                        formatDisplay={formatDisplay}
+                      />
                     </TableCell>
                   </TableRow>
                 ))
@@ -253,6 +324,7 @@ export default async function PortfolioSummaryPage() {
                         <TableHead className="text-right">Units</TableHead>
                         <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Net invested</TableHead>
+                        <TableHead className="text-right">Unrealized P/L</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -272,6 +344,13 @@ export default async function PortfolioSummaryPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {formatDisplay(h.netInvestedDisplay)}
+                          </TableCell>
+                          <TableCell>
+                            <UnrealizedPnlCell
+                              pnl={holdingUnrealizedPnlDisplay(h)}
+                              costBasis={h.netInvestedDisplay}
+                              formatDisplay={formatDisplay}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -294,7 +373,10 @@ export default async function PortfolioSummaryPage() {
           {summary.byCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground">No holdings by category yet.</p>
           ) : (
-            summary.byCategory.map((group) => (
+            summary.byCategory.map((group) => {
+              const groupPnl = sumUnrealizedPnlDisplay(group.holdings);
+              const groupPnlPositive = groupPnl >= 0;
+              return (
               <div key={group.category} className="space-y-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-semibold">{group.categoryLabel}</h3>
@@ -308,6 +390,18 @@ export default async function PortfolioSummaryPage() {
                     <span className="font-medium text-foreground">
                       {formatDisplay(sumCurrentAmountDisplay(group.holdings))}
                     </span>
+                    {" · "}
+                    Unrealized{" "}
+                    <span
+                      className={
+                        groupPnlPositive
+                          ? "font-medium text-emerald-600 dark:text-emerald-400"
+                          : "font-medium text-red-600 dark:text-red-400"
+                      }
+                    >
+                      {groupPnlPositive ? "+" : ""}
+                      {formatDisplay(groupPnl)}
+                    </span>
                   </p>
                 </div>
                 <Table>
@@ -318,6 +412,7 @@ export default async function PortfolioSummaryPage() {
                       <TableHead className="text-right">Units</TableHead>
                       <TableHead className="text-right">Current</TableHead>
                       <TableHead className="text-right">Net invested</TableHead>
+                      <TableHead className="text-right">Unrealized P/L</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -336,12 +431,20 @@ export default async function PortfolioSummaryPage() {
                         <TableCell className="text-right">
                           {formatDisplay(h.netInvestedDisplay)}
                         </TableCell>
+                        <TableCell>
+                          <UnrealizedPnlCell
+                            pnl={holdingUnrealizedPnlDisplay(h)}
+                            costBasis={h.netInvestedDisplay}
+                            formatDisplay={formatDisplay}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-            ))
+            );
+            })
           )}
         </CardContent>
       </Card>
