@@ -14,8 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { loadPortfolioData } from "@/lib/portfolio/load";
+import { HoldingValuationCells } from "@/components/holding-valuation-cells";
 import { PORTFOLIO_CATEGORY_LABELS } from "@/lib/portfolio/constants";
+import { loadPortfolioData } from "@/lib/portfolio/load";
+import { sumCurrentAmountDisplay } from "@/lib/portfolio/quotes";
 
 export const dynamic = "force-dynamic";
 
@@ -57,19 +59,38 @@ export default async function PortfolioSummaryPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Portfolio summary</h1>
         <p className="text-sm text-muted-foreground">
-          Holdings and idle cash from your transaction log · amounts in{" "}
-          {displayCurrency} unless noted
+          Holdings and idle cash from your transaction log · market values in{" "}
+          {displayCurrency} (header toggle)
         </p>
       </div>
+
+      {summary.holdings.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Mark-to-market (quoted assets)</CardDescription>
+            <CardTitle className="text-2xl">
+              {formatDisplay(sumCurrentAmountDisplay(summary.holdings))}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              IDX stocks: Yahoo Finance ({`*.JK`}, 15 min cache). BTC: CoinGecko.
+              P2P & obligasi have no live price yet. Stock units are lots (100
+              shares).
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Investments held</CardTitle>
           <CardDescription>
-            Open positions from buy/sell activity (quantity & net cost basis).
+            Open positions with net cost basis and current amount where a live
+            quote is available.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -77,13 +98,15 @@ export default async function PortfolioSummaryPage() {
                 <TableHead>Category</TableHead>
                 <TableHead>Application</TableHead>
                 <TableHead className="text-right">Units</TableHead>
+                <TableHead className="text-right">Current price</TableHead>
+                <TableHead className="text-right">Current amount</TableHead>
                 <TableHead className="text-right">Net invested</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {summary.holdings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground">
+                  <TableCell colSpan={7} className="text-muted-foreground">
                     No open positions yet. Log a buy transaction to start.
                   </TableCell>
                 </TableRow>
@@ -101,7 +124,17 @@ export default async function PortfolioSummaryPage() {
                     <TableCell>{row.applicationName}</TableCell>
                     <TableCell className="text-right">
                       {formatQuantity(row.quantity)}
+                      {row.category === "stock" ? (
+                        <div className="text-xs text-muted-foreground">lots</div>
+                      ) : null}
                     </TableCell>
+                    <HoldingValuationCells
+                      row={row}
+                      formatDisplay={formatDisplay}
+                      formatMoney={(amount, currency) =>
+                        money.format(amount, currency)
+                      }
+                    />
                     <TableCell className="text-right">
                       {formatDisplay(row.netInvestedDisplay)}
                     </TableCell>
@@ -163,6 +196,7 @@ export default async function PortfolioSummaryPage() {
                         <TableHead>Asset</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Units</TableHead>
+                        <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Net invested</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -175,6 +209,11 @@ export default async function PortfolioSummaryPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {formatQuantity(h.quantity)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {h.valuation.currentAmountDisplay != null
+                              ? formatDisplay(h.valuation.currentAmountDisplay)
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             {formatDisplay(h.netInvestedDisplay)}
@@ -205,9 +244,14 @@ export default async function PortfolioSummaryPage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-semibold">{group.categoryLabel}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Total net invested:{" "}
+                    Net invested{" "}
                     <span className="font-medium text-foreground">
                       {formatDisplay(group.netInvestedDisplay)}
+                    </span>
+                    {" · "}
+                    Current{" "}
+                    <span className="font-medium text-foreground">
+                      {formatDisplay(sumCurrentAmountDisplay(group.holdings))}
                     </span>
                   </p>
                 </div>
@@ -217,6 +261,7 @@ export default async function PortfolioSummaryPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Application</TableHead>
                       <TableHead className="text-right">Units</TableHead>
+                      <TableHead className="text-right">Current</TableHead>
                       <TableHead className="text-right">Net invested</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -227,6 +272,11 @@ export default async function PortfolioSummaryPage() {
                         <TableCell>{h.applicationName}</TableCell>
                         <TableCell className="text-right">
                           {formatQuantity(h.quantity)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {h.valuation.currentAmountDisplay != null
+                            ? formatDisplay(h.valuation.currentAmountDisplay)
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatDisplay(h.netInvestedDisplay)}

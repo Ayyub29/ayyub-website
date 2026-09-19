@@ -1,6 +1,10 @@
 import { getDb } from "@/db";
 import { getDisplayMoney } from "@/lib/currency/server-display";
 
+import {
+  enrichPortfolioSummaryWithQuotes,
+  type ValuedPortfolioSummary,
+} from "./quotes";
 import type { PortfolioTxRow } from "./summary";
 import { buildPortfolioSummary } from "./summary";
 
@@ -34,12 +38,19 @@ export async function loadPortfolioData() {
 
   const appMap = new Map(applications.map((a) => [a.id, a.name]));
 
-  const summary = buildPortfolioSummary(
+  const baseSummary = buildPortfolioSummary(
     txRows,
     appMap,
     money.displayCurrency,
     money.rates,
   );
+
+  const summary: ValuedPortfolioSummary =
+    await enrichPortfolioSummaryWithQuotes(
+      baseSummary,
+      money.displayCurrency,
+      money.rates,
+    );
 
   return { applications, rows: txRows, summary, money };
 }
