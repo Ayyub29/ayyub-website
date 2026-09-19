@@ -83,18 +83,64 @@ export default async function FinancialStatementPage() {
         <Card>
           <CardHeader>
             <CardTitle>Assets</CardTitle>
+            <CardDescription>
+              Liquid: bank accounts and Bibit Obligasi / SBN (plus Bibit idle
+              cash). Investment: all other portfolio positions.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableBody>
-                {statement.assets.lines.map((line) => (
-                  <TableRow key={line.label}>
-                    <TableCell>{line.label}</TableCell>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Liquid assets</h3>
+              <Table>
+                <TableBody>
+                  {statement.assets.liquid.lines.map((line) => (
+                    <TableRow key={line.label}>
+                      <TableCell>{line.label}</TableCell>
+                      <TableCell className="text-right">
+                        {format(line.amount)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/30 font-medium">
+                    <TableCell>Total liquid</TableCell>
                     <TableCell className="text-right">
-                      {format(line.amount)}
+                      {format(statement.assets.liquid.total)}
                     </TableCell>
                   </TableRow>
-                ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Investment assets</h3>
+              <Table>
+                <TableBody>
+                  {statement.assets.investment.lines.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-muted-foreground">
+                        No investment positions
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    statement.assets.investment.lines.map((line) => (
+                      <TableRow key={line.label}>
+                        <TableCell>{line.label}</TableCell>
+                        <TableCell className="text-right">
+                          {format(line.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                  <TableRow className="bg-muted/30 font-medium">
+                    <TableCell>Total investment</TableCell>
+                    <TableCell className="text-right">
+                      {format(statement.assets.investment.total)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+            <Table>
+              <TableBody>
                 <TableRow className="bg-muted/40 font-semibold">
                   <TableCell>Total assets</TableCell>
                   <TableCell className="text-right">
@@ -160,8 +206,8 @@ export default async function FinancialStatementPage() {
           <CardTitle>Personal finance health</CardTitle>
           <CardDescription>
             Based on your configured thresholds. Income & expenses use calendar
-            year {year}; cash from Accounts; investments at market prices where
-            available.
+            year {year}; liquid assets = bank + Bibit Obligasi/SBN; other
+            portfolio at market prices where available.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">

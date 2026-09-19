@@ -1,7 +1,10 @@
 import { convertWithMatrix } from "@/lib/currency/google-rates";
 import type { SupportedCurrency } from "@/lib/currencies";
 import { loadPortfolioData } from "@/lib/portfolio/load";
-import type { ValuedApplicationSummary } from "@/lib/portfolio/quotes";
+import type {
+  ValuedApplicationSummary,
+  ValuedPortfolioSummary,
+} from "@/lib/portfolio/quotes";
 import { getLatestMonthlyAccountBalance } from "@/lib/money/monthly";
 
 export type PortfolioAppAmountRow = {
@@ -53,6 +56,7 @@ export function portfolioAppAmounts(
 
 export async function loadAccountOverview(): Promise<{
   overview: AccountOverview;
+  summary: ValuedPortfolioSummary;
   money: Awaited<ReturnType<typeof loadPortfolioData>>["money"];
 }> {
   const { summary, money } = await loadPortfolioData();
@@ -111,6 +115,7 @@ export async function loadAccountOverview(): Promise<{
       grandTotalDisplay,
       displayCurrency: money.displayCurrency,
     },
+    summary,
     money,
   };
 }

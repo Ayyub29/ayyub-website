@@ -8,6 +8,10 @@ import {
   getFinanceHealthThresholds,
   type FinanceHealthThresholds,
 } from "./health-thresholds";
+import {
+  buildStatementAssetGroups,
+  type StatementAssetGroups,
+} from "./statement-assets";
 
 export type HealthStatus = "good" | "warn" | "bad" | "na";
 
@@ -26,13 +30,7 @@ export type HealthIndicatorRow = {
 export type FinancialStatement = {
   year: number;
   displayCurrency: SupportedCurrency;
-  assets: {
-    bankCash: number;
-    portfolioIdleCash: number;
-    investments: number;
-    total: number;
-    lines: Array<{ label: string; amount: number }>;
-  };
+  assets: StatementAssetGroups;
   liabilities: {
     total: number;
     lines: Array<{
@@ -238,7 +236,7 @@ export async function loadFinancialStatement(
   money: Awaited<ReturnType<typeof loadAccountOverview>>["money"];
 }> {
   const db = getDb();
-  const { overview, money } = await loadAccountOverview();
+  const { overview, summary, money } = await loadAccountOverview();
   const displayCurrency = money.displayCurrency;
 
   const [yearly, liabilities, thresholds] = await Promise.all([
@@ -252,24 +250,12 @@ export async function loadFinancialStatement(
     getFinanceHealthThresholds(),
   ]);
 
-  const portfolioIdleCash = overview.portfolioApps.reduce(
-    (sum, app) => sum + app.idleCashDisplay,
-    0,
-  );
-  const investments = overview.portfolioApps.reduce(
-    (sum, app) => sum + app.investmentsDisplay,
-    0,
-  );
-  const bankCash = overview.bankTotalDisplay;
-  const liquidAssets = bankCash + portfolioIdleCash;
-  const investmentAssets = investments;
-
-  const assetLines = [
-    { label: "IDR account", amount: overview.idrDisplay },
-    { label: "THB bank", amount: overview.thbDisplay },
-    { label: "Portfolio idle cash", amount: portfolioIdleCash },
-    { label: "Investments (portfolio)", amount: investments },
-  ];
+  const assets = buildStatementAssetGroups(summary, {
+    idrDisplay: overview.idrDisplay,
+    thbDisplay: overview.thbDisplay,
+  });
+  const liquidAssets = assets.liquid.total;
+  const investmentAssets = assets.investment.total;
 
   const liabilityLines = liabilities.map((row) => {
     const amount = convertWithMatrix(
@@ -294,7 +280,7 @@ export async function loadFinancialStatement(
   });
 
   const totalDebt = liabilityLines.reduce((sum, row) => sum + row.amount, 0);
-  const totalAssets = bankCash + portfolioIdleCash + investments;
+  const totalAssets = assets.total;
 
   const equity = totalAssets - totalDebt;
   const netWorth = equity;
@@ -331,13 +317,7 @@ export async function loadFinancialStatement(
   const base = {
     year,
     displayCurrency,
-    assets: {
-      bankCash,
-      portfolioIdleCash,
-      investments,
-      total: totalAssets,
-      lines: assetLines,
-    },
+    assets,
     liabilities: {
       total: totalDebt,
       lines: liabilityLines,
