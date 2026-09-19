@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import {
   upsertMonthlyAccountBalances,
@@ -15,6 +15,9 @@ type MonthlyBalanceFormProps = {
   month: number;
   idrDefault: string;
   thbDefault: string;
+  /** Drop outer border/padding when embedded in a dialog */
+  variant?: "default" | "plain";
+  onSuccess?: () => void;
 };
 
 const initialState: ActionResult | null = null;
@@ -24,16 +27,28 @@ export function MonthlyBalanceForm({
   month,
   idrDefault,
   thbDefault,
+  variant = "default",
+  onSuccess,
 }: MonthlyBalanceFormProps) {
   const [state, formAction, pending] = useActionState(
     upsertMonthlyAccountBalances,
     initialState,
   );
 
+  useEffect(() => {
+    if (state?.ok) {
+      onSuccess?.();
+    }
+  }, [state, onSuccess]);
+
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:flex-wrap sm:items-end"
+      className={
+        variant === "plain"
+          ? "flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
+          : "flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:flex-wrap sm:items-end"
+      }
     >
       <input type="hidden" name="year" value={year} />
       <input type="hidden" name="month" value={month} />

@@ -1,4 +1,4 @@
-import { MonthlyBalanceForm } from "@/components/monthly-balance-form";
+import { MonthlyBalanceDialog } from "@/components/monthly-balance-dialog";
 import { SavingRateMetricsTable } from "@/components/saving-rate-metrics-table";
 import { SummaryKpiGrid } from "@/components/summary-kpi-grid";
 import { BudgetStatusBadge } from "@/components/budget-status-badge";
@@ -48,6 +48,8 @@ export function DashboardMonthlyView({
     saving.thbBalance != null
       ? formatBudgetInputAmount(saving.thbBalance, "THB")
       : "";
+  const needsBalances =
+    saving.idrBalance == null || saving.thbBalance == null;
 
   return (
     <>
@@ -61,23 +63,24 @@ export function DashboardMonthlyView({
       />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Monthly saving rate</CardTitle>
-          <CardDescription>
-            Enter end-of-month IDR and THB account balances. Total balance sums
-            both in {displayCurrency}. Save amount is the change in total
-            balance vs the previous month; saving ratio is save amount divided
-            by income.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <MonthlyBalanceForm
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <CardTitle>Monthly saving rate</CardTitle>
+            <CardDescription>
+              End-of-month IDR and THB balances for this month. Total balance
+              sums both in {displayCurrency}. Save amount is the change vs the
+              previous month; saving ratio is save amount divided by income.
+            </CardDescription>
+          </div>
+          <MonthlyBalanceDialog
             year={year}
             month={month}
             idrDefault={idrFormDefault}
             thbDefault={thbFormDefault}
+            promptWhenMissing={needsBalances}
           />
-
+        </CardHeader>
+        <CardContent className="space-y-6">
           <SavingRateMetricsTable
             saving={saving}
             displayCurrency={displayCurrency}

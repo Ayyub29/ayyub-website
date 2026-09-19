@@ -1,11 +1,8 @@
-import { and, eq } from "drizzle-orm";
-
-import { getDb, schema } from "@/db";
 import { convertWithMatrix } from "@/lib/currency/google-rates";
 import type { SupportedCurrency } from "@/lib/currencies";
 import { loadPortfolioData } from "@/lib/portfolio/load";
 import type { ValuedApplicationSummary } from "@/lib/portfolio/quotes";
-import { parseYearMonth } from "@/lib/money/monthly";
+import { getLatestMonthlyAccountBalance } from "@/lib/money/monthly";
 
 export type PortfolioAppAmountRow = {
   applicationId: string;
@@ -17,8 +14,9 @@ export type PortfolioAppAmountRow = {
 };
 
 export type AccountOverview = {
-  year: number;
-  month: number;
+  /** Calendar month of the last saved bank balance row, if any */
+  balanceYear: number | null;
+  balanceMonth: number | null;
   idrBalance: number | null;
   thbBalance: number | null;
   idrDisplay: number;
@@ -57,16 +55,9 @@ export async function loadAccountOverview(): Promise<{
   overview: AccountOverview;
   money: Awaited<ReturnType<typeof loadPortfolioData>>["money"];
 }> {
-  const { year, month } = parseYearMonth();
-  const db = getDb();
   const { summary, money } = await loadPortfolioData();
 
-  const balanceRow = await db.query.monthlyAccountBalances.findFirst({
-    where: and(
-      eq(schema.monthlyAccountBalances.year, year),
-      eq(schema.monthlyAccountBalances.month, month),
-    ),
-  });
+  const balanceRow = await getLatestMonthlyAccountBalance();
 
   const idrBalance = balanceRow ? Number(balanceRow.idrBalance) : null;
   const thbBalance = balanceRow ? Number(balanceRow.thbBalance) : null;
@@ -108,8 +99,8 @@ export async function loadAccountOverview(): Promise<{
 
   return {
     overview: {
-      year,
-      month,
+      balanceYear: balanceRow?.year ?? null,
+      balanceMonth: balanceRow?.month ?? null,
       idrBalance,
       thbBalance,
       idrDisplay,
