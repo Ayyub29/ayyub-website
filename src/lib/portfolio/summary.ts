@@ -67,7 +67,8 @@ type PositionState = {
   name: string;
   totalBuyUnits: number;
   totalSellUnits: number;
-  netInvestedByCurrency: CashByCurrency;
+  /** Sum of buy transaction amounts only (cost basis before sells). */
+  totalBuyCostByCurrency: CashByCurrency;
 };
 
 function toDisplay(
@@ -126,10 +127,10 @@ export function buildPortfolioSummary(
           name: canonical,
           totalBuyUnits: 0,
           totalSellUnits: 0,
-          netInvestedByCurrency: {},
+          totalBuyCostByCurrency: {},
         };
         existing.totalBuyUnits += units;
-        addCash(existing.netInvestedByCurrency, tx.currency, amount);
+        addCash(existing.totalBuyCostByCurrency, tx.currency, amount);
         holdings.set(key, existing);
         break;
       }
@@ -138,20 +139,17 @@ export function buildPortfolioSummary(
         if (!tx.category) {
           break;
         }
+        const canonical = normalizeHoldingName(tx.name, tx.category);
         const key = holdingPositionKey(tx.applicationId, tx.category, tx.name);
-        const existing = holdings.get(key);
-        if (!existing) {
-          break;
-        }
-        const openBefore = existing.totalBuyUnits - existing.totalSellUnits;
-        if (openBefore > 0 && units > 0) {
-          const ratio = Math.min(1, units / openBefore);
-          for (const [cur, invested] of Object.entries(
-            existing.netInvestedByCurrency,
-          )) {
-            existing.netInvestedByCurrency[cur] = invested * (1 - ratio);
-          }
-        }
+        const existing = holdings.get(key) ?? {
+          applicationId: tx.applicationId,
+          applicationName: tx.applicationName,
+          category: tx.category,
+          name: canonical,
+          totalBuyUnits: 0,
+          totalSellUnits: 0,
+          totalBuyCostByCurrency: {},
+        };
         existing.totalSellUnits += units;
         holdings.set(key, existing);
         break;
@@ -170,11 +168,19 @@ export function buildPortfolioSummary(
     }
 
     const quantity = h.totalBuyUnits - h.totalSellUnits;
+    const costScale =
+      h.totalBuyUnits > 0 ? quantity / h.totalBuyUnits : 0;
     let netInvestedDisplay = 0;
     let netInvestedRaw = 0;
-    for (const [cur, val] of Object.entries(h.netInvestedByCurrency)) {
-      netInvestedRaw += val;
-      netInvestedDisplay += toDisplay(val, cur, displayCurrency, rates);
+    for (const [cur, val] of Object.entries(h.totalBuyCostByCurrency)) {
+      const remaining = val * costScale;
+      netInvestedRaw += remaining;
+      netInvestedDisplay += toDisplay(
+        remaining,
+        cur,
+        displayCurrency,
+        rates,
+      );
     }
     holdingRows.push({
       applicationId: h.applicationId,
